@@ -1,14 +1,20 @@
 import { BaseEntity, SkillStatus } from "./base";
 
-export interface Staffer extends BaseEntity {
+export interface Staffer {
    id: string;
    first_name: string;
    last_name: string;
    email: string;
    title: string;
-   seniority_id?: string;
-   time_zone?: string;
    capacity: number;
+   time_zone?: string;
+   created_at: string;
+   last_updated_at: string;
+   user_id?: string;
+   seniority?: {
+      seniority_name: string;
+      seniority_level: number;
+   };
 }
 
 export interface StafferSkill extends BaseEntity {

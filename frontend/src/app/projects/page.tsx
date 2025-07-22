@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import type { Project } from "@/types/project";
 import { ProjectStatus } from "@/types/base";
@@ -10,6 +9,7 @@ import { ProjectsGrid } from "./components/ProjectsGrid";
 import { ProjectModal } from "./components/ProjectModal";
 import { ProjectsHeader } from "./components/ProjectsHeader";
 import { ProjectFilters } from "./components/ProjectFilters";
+import { projectService } from "./services/projectService";
 
 export default function ProjectsPage() {
    const [projects, setProjects] = useState<Project[]>([]);
@@ -24,8 +24,6 @@ export default function ProjectsPage() {
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
 
-   const supabase = createClient();
-
    useEffect(() => {
       fetchProjects();
    }, []);
@@ -34,27 +32,16 @@ export default function ProjectsPage() {
       setLoading(true);
       setError(null);
 
-      try {
-         const { data, error } = await supabase.from("projects").select(`
-            project_id,
-            client_id,
-            project_name,
-            project_status,
-            project_start_date,
-            project_due_date,
-            created_at,
-            last_updated_at
-         `);
+      const { data, error } = await projectService.getAllProjects();
 
-         if (error) throw error;
-
-         setProjects(data as Project[]);
-      } catch (err) {
-         console.error("Error fetching projects:", err);
+      if (error) {
+         console.error("Error fetching projects:", error);
          setError("Failed to load projects. Please try again later.");
-      } finally {
-         setLoading(false);
+      } else {
+         setProjects(data || []);
       }
+
+      setLoading(false);
    }
 
    const openModal = (project?: Project) => {
