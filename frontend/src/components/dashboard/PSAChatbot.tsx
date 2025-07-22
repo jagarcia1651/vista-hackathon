@@ -22,14 +22,8 @@ interface ChatResponse {
 }
 
 export function PSAChatbot() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
-      role: 'assistant',
-      timestamp: new Date()
-    }
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown')
@@ -42,6 +36,21 @@ export function PSAChatbot() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Initialize welcome message on client side only
+  useEffect(() => {
+    if (!isInitialized) {
+      setMessages([
+        {
+          id: '1',
+          content: 'Hello! I\'m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
+          role: 'assistant',
+          timestamp: new Date()
+        }
+      ])
+      setIsInitialized(true)
+    }
+  }, [isInitialized])
 
   // Check backend status on component mount
   useEffect(() => {

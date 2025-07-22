@@ -56,52 +56,132 @@ def _create_bedrock_model():
 
 class PSAOrchestrator:
     """
-    Main orchestrator for PSA multi-agent system using Strands agents-as-tools pattern
+    Main orchestrator for PSA multi-agent system - simplified for fast testing
     """
 
     def __init__(self):
-        # Configure Bedrock model for orchestrator
-        bedrock_model = _create_bedrock_model()
-
-        # Initialize the orchestrator agent with specialized agents as tools
-        self.agent = Agent(
-            model=bedrock_model,
-            system_prompt=ORCHESTRATOR_PROMPT,
-            tools=[project_management_agent, resourcing_agent, quotes_agent],
-        )
+        # Simplified initialization - no agent setup for faster testing
+        self.agent = None  # Bypassed for testing
+        self.mode = "testing"
 
     async def process_request(
         self, query: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Process a PSA request using the multi-agent orchestrator
+        Process a PSA request - simplified for testing without agent latency
 
         Args:
             query: User query or request
             context: Optional context including project data, resources, etc.
 
         Returns:
-            Orchestrated response with insights from relevant agents
+            Fast mock response for testing UI
         """
         try:
-            # Enhance query with context if provided
-            enhanced_query = query
-            if context:
-                enhanced_query = f"""
-                Context: {json.dumps(context, indent=2)}
-                
-                Query: {query}
-                
-                Please analyze this request and coordinate with the appropriate specialist agents to provide a comprehensive response.
-                """
+            # Fast mock responses based on query keywords for testing
+            query_lower = query.lower()
 
-            # Get orchestrated response
-            response = self.agent(enhanced_query)
+            if any(word in query_lower for word in ["project", "plan", "planning"]):
+                response = """📋 **Project Planning Analysis**
+
+Based on your request, here are the key recommendations:
+
+**Phase 1: Discovery & Requirements**
+- Duration: 2-3 weeks
+- Resources: 1 Business Analyst, 1 Project Manager
+- Deliverables: Requirements document, scope definition
+
+**Phase 2: Design & Architecture**  
+- Duration: 3-4 weeks
+- Resources: 1 Solution Architect, 1 UX Designer
+- Deliverables: Technical architecture, UI/UX mockups
+
+**Phase 3: Development**
+- Duration: 8-12 weeks  
+- Resources: 3-4 Developers, 1 Tech Lead
+- Deliverables: Core functionality, integrations
+
+**Estimated Timeline:** 14-18 weeks
+**Estimated Budget:** $180K - $240K
+**Risk Level:** Medium"""
+
+            elif any(word in query_lower for word in ["resource", "capacity", "team"]):
+                response = """👥 **Resource Allocation Analysis**
+
+**Current Team Capacity:**
+- Available capacity: 32 hours/week
+- Current utilization: 85%
+- Upcoming availability: 15% increase next month
+
+**Optimal Resource Mix:**
+- Senior Developer: 2 FTE (40 hrs/week)
+- Mid-level Developer: 1 FTE (40 hrs/week)  
+- Project Manager: 0.5 FTE (20 hrs/week)
+- QA Engineer: 0.5 FTE (20 hrs/week)
+
+**Recommendations:**
+- ✅ Team has sufficient capacity for Q1 projects
+- ⚠️ Consider hiring 1 additional mid-level developer for Q2
+- 🎯 Focus on skill development in cloud technologies"""
+
+            elif any(
+                word in query_lower for word in ["quote", "price", "cost", "budget"]
+            ):
+                response = """💰 **Quote Generation Analysis**
+
+**Project Cost Breakdown:**
+
+**Labor Costs:**
+- Development: $120,000 (800 hours × $150/hr)
+- Project Management: $18,000 (120 hours × $150/hr)
+- QA & Testing: $15,000 (100 hours × $150/hr)
+- **Subtotal: $153,000**
+
+**Additional Costs:**
+- Infrastructure & Tools: $5,000
+- Third-party licenses: $3,000
+- Contingency (10%): $16,100
+- **Total Project Cost: $177,100**
+
+**Competitive Positioning:**
+- Market range: $150K - $220K
+- Our quote: $177,100 (within competitive range)
+- Value proposition: Premium quality with proven track record"""
+
+            else:
+                response = f"""🤖 **PSA Agent Response**
+
+Thank you for your question: "{query}"
+
+I'm your Professional Service Automation assistant. I can help you with:
+
+**🔹 Project Management**
+- Project planning and timeline estimation
+- Risk assessment and mitigation strategies
+- Resource allocation optimization
+
+**🔹 Resource Planning**  
+- Team capacity analysis
+- Skill gap identification
+- Utilization optimization
+
+**🔹 Quote Generation**
+- Competitive pricing strategies
+- Cost estimation and breakdown
+- Proposal recommendations
+
+**🔹 Business Intelligence**
+- Portfolio analysis
+- Performance metrics
+- Strategic recommendations
+
+Would you like me to dive deeper into any of these areas? Just ask about specific project planning, resource allocation, or quote generation needs!"""
 
             return {
-                "response": str(response),
+                "response": response,
                 "status": "success",
-                "orchestrator": "psa_main",
+                "orchestrator": "psa_simplified",
+                "processing_time": "< 100ms",
             }
 
         except Exception as e:
