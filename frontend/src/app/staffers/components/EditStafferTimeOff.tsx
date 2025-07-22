@@ -4,6 +4,7 @@ import {
    Calendar,
    Check,
    ChevronDown,
+   ChevronRight,
    ChevronUp,
    Clock,
    Edit,
@@ -27,6 +28,18 @@ interface TimeOffFormData {
    time_off_end_date: string;
    time_off_cumulative_hours: number;
 }
+
+interface PendingTimeOffEntry {
+   time_off_id: string;
+   staffer_id: string;
+   time_off_start_datetime: string;
+   time_off_end_datetime: string;
+   time_off_cumulative_hours: number;
+   isPending: true;
+   tempId: string;
+}
+
+type TimeOffEntryData = StafferTimeOff | PendingTimeOffEntry;
 
 export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
    const {
@@ -56,6 +69,7 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
       time_off_cumulative_hours: 0,
    });
    const [formError, setFormError] = useState("");
+   const [isPastSectionCollapsed, setIsPastSectionCollapsed] = useState(true); // Past section collapsed by default
 
    const formatDate = (dateString: string) => {
       return new Date(dateString).toLocaleDateString("en-US", {
@@ -405,15 +419,167 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
       </div>
    );
 
+   const TimeOffEntry = ({ entry }: { entry: TimeOffEntryData }) => {
+      const status = getEntryStatus(entry);
+      const isMultiDay =
+         entry.time_off_start_datetime.split("T")[0] !==
+         entry.time_off_end_datetime.split("T")[0];
+      const isPendingEntry = "isPending" in entry && entry.isPending;
+      const canEditEntry = canEdit(entry);
+      const isEditing =
+         editingEntryId === entry.time_off_id ||
+         editingPendingId === entry.time_off_id;
+
+      return (
+         <div key={entry.time_off_id}>
+            <div
+               className={`border rounded-lg p-4 hover:shadow-sm transition-shadow ${
+                  isPendingEntry
+                     ? "border-2 border-dashed border-green-300 bg-green-50"
+                     : "border-slate-200 bg-white"
+               }`}
+            >
+               <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                     <div className="flex items-center gap-2 mb-2">
+                        <span
+                           className={`px-2 py-1 text-xs font-medium rounded-full ${status.color}`}
+                        >
+                           {status.text}
+                        </span>
+                        {isPendingEntry && (
+                           <span className="px-2 py-1 text-xs font-medium rounded-full text-green-600 bg-green-200">
+                              pending
+                           </span>
+                        )}
+                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                           <Clock className="w-3 h-3" />
+                           {getDurationText(entry.time_off_cumulative_hours)}
+                        </div>
+                     </div>
+
+                     <div className="space-y-1">
+                        {isMultiDay ? (
+                           <>
+                              <div className="flex items-center gap-2 text-sm">
+                                 <span className="font-medium text-slate-700">
+                                    Start:
+                                 </span>
+                                 <span className="text-slate-600">
+                                    {formatDate(entry.time_off_start_datetime)}{" "}
+                                    at{" "}
+                                    {formatTime(entry.time_off_start_datetime)}
+                                 </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm">
+                                 <span className="font-medium text-slate-700">
+                                    End:
+                                 </span>
+                                 <span className="text-slate-600">
+                                    {formatDate(entry.time_off_end_datetime)} at{" "}
+                                    {formatTime(entry.time_off_end_datetime)}
+                                 </span>
+                              </div>
+                           </>
+                        ) : (
+                           <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium text-slate-700">
+                                 Date:
+                              </span>
+                              <span className="text-slate-600">
+                                 {formatDate(entry.time_off_start_datetime)}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-600">
+                                 {formatTime(entry.time_off_start_datetime)} -{" "}
+                                 {formatTime(entry.time_off_end_datetime)}
+                              </span>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                     <div className="text-right mr-2">
+                        <div className="text-lg font-semibold text-slate-900">
+                           {entry.time_off_cumulative_hours}h
+                        </div>
+                        <div className="text-xs text-slate-500">
+                           Total Hours
+                        </div>
+                     </div>
+
+                     {canEditEntry && (
+                        <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                              if (isEditing) {
+                                 closeEditForm();
+                              } else {
+                                 isPendingEntry
+                                    ? openEditPendingForm(entry.time_off_id)
+                                    : openEditForm(entry as StafferTimeOff);
+                              }
+                           }}
+                           className="p-2"
+                        >
+                           {isEditing ? (
+                              <ChevronUp className="w-3 h-3" />
+                           ) : (
+                              <>
+                                 <Edit className="w-3 h-3 mr-1" />
+                                 <ChevronDown className="w-3 h-3" />
+                              </>
+                           )}
+                        </Button>
+                     )}
+
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                           isPendingEntry
+                              ? handleDeletePendingTimeOff(entry.time_off_id)
+                              : handleDeleteTimeOff(entry.time_off_id)
+                        }
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                     >
+                        <Trash2 className="w-3 h-3" />
+                     </Button>
+                  </div>
+               </div>
+            </div>
+
+            {/* Edit Form - Show inline below entry when editing */}
+            {isEditing && (
+               <div className="mt-2">
+                  <TimeOffForm />
+               </div>
+            )}
+         </div>
+      );
+   };
+
    const visibleTimeOffEntries = getVisibleTimeOffEntries();
-   const allEntries = [
+   const allEntries: TimeOffEntryData[] = [
       ...visibleTimeOffEntries,
       ...pendingTimeOffAdditions.map((pending) => ({
          ...pending,
          time_off_id: pending.tempId,
-         isPending: true,
+         isPending: true as const,
       })),
    ];
+
+   // Separate entries into past and upcoming/active
+   const pastEntries = allEntries.filter((entry) =>
+      isPast(entry.time_off_end_datetime)
+   );
+   const upcomingEntries = allEntries.filter(
+      (entry) => !isPast(entry.time_off_end_datetime)
+   );
 
    if (!staffer) {
       return (
@@ -462,180 +628,64 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
                </div>
             </div>
          ) : (
-            <div className="space-y-3">
-               {allEntries.map((entry) => {
-                  const status = getEntryStatus(entry);
-                  const isMultiDay =
-                     entry.time_off_start_datetime.split("T")[0] !==
-                     entry.time_off_end_datetime.split("T")[0];
-                  const isPendingEntry =
-                     "isPending" in entry && entry.isPending;
-                  const canEditEntry = canEdit(entry);
-                  const isEditing =
-                     editingEntryId === entry.time_off_id ||
-                     editingPendingId === entry.time_off_id;
-
-                  return (
-                     <div key={entry.time_off_id}>
-                        <div
-                           className={`border rounded-lg p-4 hover:shadow-sm transition-shadow ${
-                              isPendingEntry
-                                 ? "border-2 border-dashed border-green-300 bg-green-50"
-                                 : "border-slate-200 bg-white"
-                           }`}
-                        >
-                           <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                 <div className="flex items-center gap-2 mb-2">
-                                    <span
-                                       className={`px-2 py-1 text-xs font-medium rounded-full ${status.color}`}
-                                    >
-                                       {status.text}
-                                    </span>
-                                    {isPendingEntry && (
-                                       <span className="px-2 py-1 text-xs font-medium rounded-full text-green-600 bg-green-200">
-                                          pending
-                                       </span>
-                                    )}
-                                    <div className="flex items-center gap-1 text-sm text-slate-600">
-                                       <Clock className="w-3 h-3" />
-                                       {getDurationText(
-                                          entry.time_off_cumulative_hours
-                                       )}
-                                    </div>
-                                 </div>
-
-                                 <div className="space-y-1">
-                                    {isMultiDay ? (
-                                       <>
-                                          <div className="flex items-center gap-2 text-sm">
-                                             <span className="font-medium text-slate-700">
-                                                Start:
-                                             </span>
-                                             <span className="text-slate-600">
-                                                {formatDate(
-                                                   entry.time_off_start_datetime
-                                                )}{" "}
-                                                at{" "}
-                                                {formatTime(
-                                                   entry.time_off_start_datetime
-                                                )}
-                                             </span>
-                                          </div>
-                                          <div className="flex items-center gap-2 text-sm">
-                                             <span className="font-medium text-slate-700">
-                                                End:
-                                             </span>
-                                             <span className="text-slate-600">
-                                                {formatDate(
-                                                   entry.time_off_end_datetime
-                                                )}{" "}
-                                                at{" "}
-                                                {formatTime(
-                                                   entry.time_off_end_datetime
-                                                )}
-                                             </span>
-                                          </div>
-                                       </>
-                                    ) : (
-                                       <div className="flex items-center gap-2 text-sm">
-                                          <span className="font-medium text-slate-700">
-                                             Date:
-                                          </span>
-                                          <span className="text-slate-600">
-                                             {formatDate(
-                                                entry.time_off_start_datetime
-                                             )}
-                                          </span>
-                                          <span className="text-slate-400">
-                                             •
-                                          </span>
-                                          <span className="text-slate-600">
-                                             {formatTime(
-                                                entry.time_off_start_datetime
-                                             )}{" "}
-                                             -{" "}
-                                             {formatTime(
-                                                entry.time_off_end_datetime
-                                             )}
-                                          </span>
-                                       </div>
-                                    )}
-                                 </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                 <div className="text-right mr-2">
-                                    <div className="text-lg font-semibold text-slate-900">
-                                       {entry.time_off_cumulative_hours}h
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                       Total Hours
-                                    </div>
-                                 </div>
-
-                                 {canEditEntry && (
-                                    <Button
-                                       type="button"
-                                       variant="outline"
-                                       size="sm"
-                                       onClick={() => {
-                                          if (isEditing) {
-                                             closeEditForm();
-                                          } else {
-                                             isPendingEntry
-                                                ? openEditPendingForm(
-                                                     entry.time_off_id
-                                                  )
-                                                : openEditForm(
-                                                     entry as StafferTimeOff
-                                                  );
-                                          }
-                                       }}
-                                       className="p-2"
-                                    >
-                                       {isEditing ? (
-                                          <ChevronUp className="w-3 h-3" />
-                                       ) : (
-                                          <>
-                                             <Edit className="w-3 h-3 mr-1" />
-                                             <ChevronDown className="w-3 h-3" />
-                                          </>
-                                       )}
-                                    </Button>
-                                 )}
-
-                                 <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                       isPendingEntry
-                                          ? handleDeletePendingTimeOff(
-                                               entry.time_off_id
-                                            )
-                                          : handleDeleteTimeOff(
-                                               entry.time_off_id
-                                            )
-                                    }
-                                    className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                 >
-                                    <Trash2 className="w-3 h-3" />
-                                 </Button>
-                              </div>
-                           </div>
-                        </div>
-
-                        {/* Edit Form - Show inline below entry when editing */}
-                        {isEditing && (
-                           <div className="mt-2">
-                              <TimeOffForm />
-                           </div>
-                        )}
+            <div className="space-y-6">
+               {/* Upcoming/Active Section */}
+               {upcomingEntries.length > 0 && (
+                  <div className="space-y-3">
+                     <div className="flex items-center gap-2">
+                        <h4 className="text-md font-medium text-slate-900">
+                           Upcoming & Active
+                        </h4>
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                           {upcomingEntries.length}
+                        </span>
                      </div>
-                  );
-               })}
+                     <div className="space-y-3">
+                        {upcomingEntries.map((entry) => (
+                           <TimeOffEntry
+                              key={entry.time_off_id}
+                              entry={entry}
+                           />
+                        ))}
+                     </div>
+                  </div>
+               )}
 
+               {/* Past Section - Collapsible */}
+               {pastEntries.length > 0 && (
+                  <div className="space-y-3">
+                     <button
+                        type="button"
+                        onClick={() =>
+                           setIsPastSectionCollapsed(!isPastSectionCollapsed)
+                        }
+                        className="flex items-center gap-2 text-md font-medium text-slate-900 hover:text-slate-700 transition-colors"
+                     >
+                        {isPastSectionCollapsed ? (
+                           <ChevronRight className="w-4 h-4" />
+                        ) : (
+                           <ChevronDown className="w-4 h-4" />
+                        )}
+                        Past
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600">
+                           {pastEntries.length}
+                        </span>
+                     </button>
+
+                     {!isPastSectionCollapsed && (
+                        <div className="space-y-3">
+                           {pastEntries.map((entry) => (
+                              <TimeOffEntry
+                                 key={entry.time_off_id}
+                                 entry={entry}
+                              />
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               )}
+
+               {/* Summary Section */}
                <div className="mt-6 p-4 bg-slate-50 rounded-lg">
                   <div className="flex items-center justify-between text-sm">
                      <span className="font-medium text-slate-700">
