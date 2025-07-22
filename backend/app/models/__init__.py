@@ -25,7 +25,7 @@ __all__ = [
     "ProjectCreateRequest",
     "ProjectUpdateRequest",
     "PhaseCreateRequest",
-    "TaskCreateRequest",
+    "ProjectTaskCreateRequest",
     "ProjectResponse",
     "PhaseResponse",
     "TaskResponse",

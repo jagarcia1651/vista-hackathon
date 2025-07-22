@@ -211,7 +211,7 @@ class PhaseCreateRequest(BaseModel):
     phase_due_date: Optional[str] = None
 
 
-class TaskCreateRequest(BaseModel):
+class ProjectTaskCreateRequest(BaseModel):
     project_id: str
     task_name: str
     task_description: Optional[str] = None
