@@ -9,8 +9,12 @@ export interface BaseEntity {
 
 // Common status enums
 export enum ProjectStatus {
-   ACTIVE = "Active",
-   ON_HOLD = "On Hold",
+   RFP = "RFP",
+   QUOTED = "Quoted",
+   LOST = "Lost",
+   PENDING = "Pending",
+   IN_PROGRESS_ON_TRACK = "In Progress - On Track",
+   IN_PROGRESS_OFF_TRACK = "In Progress - Off Track",
    COMPLETED = "Completed",
    CANCELLED = "Cancelled"
 }

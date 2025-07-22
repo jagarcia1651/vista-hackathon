@@ -24,7 +24,7 @@ export function ProjectModal({
    const [formData, setFormData] = useState<Partial<Project>>(
       project || {
          project_name: "",
-         project_status: ProjectStatus.ACTIVE,
+         project_status: ProjectStatus.RFP,
          project_start_date: new Date().toISOString().split("T")[0],
          project_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             .toISOString()
@@ -106,8 +106,16 @@ export function ProjectModal({
                            })
                         }
                      >
-                        <option value={ProjectStatus.ACTIVE}>Active</option>
-                        <option value={ProjectStatus.ON_HOLD}>On Hold</option>
+                        <option value={ProjectStatus.RFP}>RFP</option>
+                        <option value={ProjectStatus.QUOTED}>Quoted</option>
+                        <option value={ProjectStatus.LOST}>Lost</option>
+                        <option value={ProjectStatus.PENDING}>Pending</option>
+                        <option value={ProjectStatus.IN_PROGRESS_ON_TRACK}>
+                           In Progress - On Track
+                        </option>
+                        <option value={ProjectStatus.IN_PROGRESS_OFF_TRACK}>
+                           In Progress - Off Track
+                        </option>
                         <option value={ProjectStatus.COMPLETED}>
                            Completed
                         </option>

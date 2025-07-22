@@ -78,8 +78,12 @@ export default function ProjectsPage() {
          return acc;
       },
       {
-         [ProjectStatus.ACTIVE]: 0,
-         [ProjectStatus.ON_HOLD]: 0,
+         [ProjectStatus.RFP]: 0,
+         [ProjectStatus.QUOTED]: 0,
+         [ProjectStatus.LOST]: 0,
+         [ProjectStatus.PENDING]: 0,
+         [ProjectStatus.IN_PROGRESS_ON_TRACK]: 0,
+         [ProjectStatus.IN_PROGRESS_OFF_TRACK]: 0,
          [ProjectStatus.COMPLETED]: 0,
          [ProjectStatus.CANCELLED]: 0
       }

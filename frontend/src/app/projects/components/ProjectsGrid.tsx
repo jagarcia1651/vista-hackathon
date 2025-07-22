@@ -132,14 +132,22 @@ function ProjectRow({ project, onEdit }: ProjectRowProps) {
 
 function getStatusColor(status: ProjectStatus): string {
    switch (status) {
-      case ProjectStatus.ACTIVE:
+      case ProjectStatus.RFP:
+         return "bg-purple-100 text-purple-800";
+      case ProjectStatus.QUOTED:
+         return "bg-blue-100 text-blue-800";
+      case ProjectStatus.LOST:
+         return "bg-red-100 text-red-800";
+      case ProjectStatus.PENDING:
+         return "bg-yellow-100 text-yellow-800";
+      case ProjectStatus.IN_PROGRESS_ON_TRACK:
          return "bg-green-100 text-green-800";
-      case ProjectStatus.ON_HOLD:
+      case ProjectStatus.IN_PROGRESS_OFF_TRACK:
          return "bg-orange-100 text-orange-800";
       case ProjectStatus.COMPLETED:
-         return "bg-blue-100 text-blue-800";
+         return "bg-teal-100 text-teal-800";
       case ProjectStatus.CANCELLED:
-         return "bg-red-100 text-red-800";
+         return "bg-gray-100 text-gray-800";
       default:
          return "bg-gray-100 text-gray-800";
    }

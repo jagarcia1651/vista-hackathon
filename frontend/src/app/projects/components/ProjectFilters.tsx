@@ -2,8 +2,12 @@ import { Button } from "@/components/ui/button";
 import { ProjectStatus } from "@/types/base";
 
 interface ProjectStats {
-   [ProjectStatus.ACTIVE]: number;
-   [ProjectStatus.ON_HOLD]: number;
+   [ProjectStatus.RFP]: number;
+   [ProjectStatus.QUOTED]: number;
+   [ProjectStatus.LOST]: number;
+   [ProjectStatus.PENDING]: number;
+   [ProjectStatus.IN_PROGRESS_ON_TRACK]: number;
+   [ProjectStatus.IN_PROGRESS_OFF_TRACK]: number;
    [ProjectStatus.COMPLETED]: number;
    [ProjectStatus.CANCELLED]: number;
 }
@@ -28,16 +32,44 @@ export function ProjectFilters({
          activeColor: "bg-slate-800 text-white"
       },
       {
-         label: "Active",
-         value: ProjectStatus.ACTIVE,
-         count: stats[ProjectStatus.ACTIVE],
+         label: "RFP",
+         value: ProjectStatus.RFP,
+         count: stats[ProjectStatus.RFP],
+         color: "bg-purple-100 text-purple-800",
+         activeColor: "bg-purple-800 text-white"
+      },
+      {
+         label: "Quoted",
+         value: ProjectStatus.QUOTED,
+         count: stats[ProjectStatus.QUOTED],
+         color: "bg-blue-100 text-blue-800",
+         activeColor: "bg-blue-800 text-white"
+      },
+      {
+         label: "Lost",
+         value: ProjectStatus.LOST,
+         count: stats[ProjectStatus.LOST],
+         color: "bg-red-100 text-red-800",
+         activeColor: "bg-red-800 text-white"
+      },
+      {
+         label: "Pending",
+         value: ProjectStatus.PENDING,
+         count: stats[ProjectStatus.PENDING],
+         color: "bg-yellow-100 text-yellow-800",
+         activeColor: "bg-yellow-800 text-white"
+      },
+      {
+         label: "In Progress - On Track",
+         value: ProjectStatus.IN_PROGRESS_ON_TRACK,
+         count: stats[ProjectStatus.IN_PROGRESS_ON_TRACK],
          color: "bg-green-100 text-green-800",
          activeColor: "bg-green-800 text-white"
       },
       {
-         label: "On Hold",
-         value: ProjectStatus.ON_HOLD,
-         count: stats[ProjectStatus.ON_HOLD],
+         label: "In Progress - Off Track",
+         value: ProjectStatus.IN_PROGRESS_OFF_TRACK,
+         count: stats[ProjectStatus.IN_PROGRESS_OFF_TRACK],
          color: "bg-orange-100 text-orange-800",
          activeColor: "bg-orange-800 text-white"
       },
@@ -45,15 +77,15 @@ export function ProjectFilters({
          label: "Completed",
          value: ProjectStatus.COMPLETED,
          count: stats[ProjectStatus.COMPLETED],
-         color: "bg-blue-100 text-blue-800",
-         activeColor: "bg-blue-800 text-white"
+         color: "bg-teal-100 text-teal-800",
+         activeColor: "bg-teal-800 text-white"
       },
       {
          label: "Cancelled",
          value: ProjectStatus.CANCELLED,
          count: stats[ProjectStatus.CANCELLED],
-         color: "bg-red-100 text-red-800",
-         activeColor: "bg-red-800 text-white"
+         color: "bg-gray-100 text-gray-800",
+         activeColor: "bg-gray-800 text-white"
       }
    ];
 
