@@ -2,6 +2,7 @@
 
 import { useStaffers } from "@/app/staffers/contexts/StaffersContext";
 import { CreateStafferData } from "@/app/staffers/services/stafferService";
+import { Modal } from "@/components/shared/Modal";
 import { Button } from "@/components/ui/button";
 import {
    Card,
@@ -158,231 +159,218 @@ export function StafferModal({
       }
    };
 
-   if (!isOpen) return null;
-
    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-         {/* Backdrop with blur */}
-         <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
-         />
-
-         {/* Modal Content */}
-         <div className="relative z-50 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <Card>
-               <CardHeader>
-                  <CardTitle>
-                     {staffer ? "Edit Staffer" : "Create New Staffer"}
-                  </CardTitle>
-                  <CardDescription>
-                     {staffer
-                        ? "Update the staffer information below"
-                        : "Enter the details for the new team member"}
-                  </CardDescription>
-               </CardHeader>
-               <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                           {error}
-                        </div>
-                     )}
-
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                           <label
-                              htmlFor="first_name"
-                              className="text-sm font-medium text-slate-900"
-                           >
-                              First Name
-                           </label>
-                           <Input
-                              id="first_name"
-                              type="text"
-                              value={formData.first_name}
-                              onChange={(e) =>
-                                 handleInputChange("first_name", e.target.value)
-                              }
-                              placeholder="John"
-                              required
-                           />
-                        </div>
-
-                        <div className="space-y-2">
-                           <label
-                              htmlFor="last_name"
-                              className="text-sm font-medium text-slate-900"
-                           >
-                              Last Name
-                           </label>
-                           <Input
-                              id="last_name"
-                              type="text"
-                              value={formData.last_name}
-                              onChange={(e) =>
-                                 handleInputChange("last_name", e.target.value)
-                              }
-                              placeholder="Doe"
-                              required
-                           />
-                        </div>
+      <Modal isOpen={isOpen} onClose={onClose}>
+         <Card>
+            <CardHeader>
+               <CardTitle>
+                  {staffer ? "Edit Staffer" : "Create New Staffer"}
+               </CardTitle>
+               <CardDescription>
+                  {staffer
+                     ? "Update the staffer information below"
+                     : "Enter the details for the new team member"}
+               </CardDescription>
+            </CardHeader>
+            <CardContent>
+               <form onSubmit={handleSubmit} className="space-y-4">
+                  {error && (
+                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                        {error}
                      </div>
+                  )}
 
+                  <div className="grid grid-cols-2 gap-4">
                      <div className="space-y-2">
                         <label
-                           htmlFor="email"
+                           htmlFor="first_name"
                            className="text-sm font-medium text-slate-900"
                         >
-                           Email Address
+                           First Name
                         </label>
                         <Input
-                           id="email"
-                           type="email"
-                           value={formData.email}
-                           onChange={(e) =>
-                              handleInputChange("email", e.target.value)
-                           }
-                           placeholder="john.doe@company.com"
-                           required
-                        />
-                     </div>
-
-                     <div className="space-y-2">
-                        <label
-                           htmlFor="title"
-                           className="text-sm font-medium text-slate-900"
-                        >
-                           Job Title
-                        </label>
-                        <Input
-                           id="title"
+                           id="first_name"
                            type="text"
-                           value={formData.title}
+                           value={formData.first_name}
                            onChange={(e) =>
-                              handleInputChange("title", e.target.value)
+                              handleInputChange("first_name", e.target.value)
                            }
-                           placeholder="Software Engineer"
+                           placeholder="John"
                            required
                         />
-                     </div>
-
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                           <label
-                              htmlFor="time_zone"
-                              className="text-sm font-medium text-slate-900"
-                           >
-                              Time Zone{" "}
-                              <span className="text-slate-500 font-normal">
-                                 (optional)
-                              </span>
-                           </label>
-                           <Input
-                              id="time_zone"
-                              type="text"
-                              value={formData.time_zone || ""}
-                              onChange={(e) =>
-                                 handleInputChange("time_zone", e.target.value)
-                              }
-                              placeholder="America/New_York"
-                           />
-                        </div>
-
-                        <div className="space-y-2">
-                           <label
-                              htmlFor="seniority_id"
-                              className="text-sm font-medium text-slate-900"
-                           >
-                              Seniority Level{" "}
-                              <span className="text-slate-500 font-normal">
-                                 (optional)
-                              </span>
-                           </label>
-                           {seniorities.length === 0 ? (
-                              <div className="text-sm text-slate-500">
-                                 Loading seniorities...
-                              </div>
-                           ) : (
-                              <select
-                                 id="seniority_id"
-                                 value={formData.seniority_id || ""}
-                                 onChange={(e) =>
-                                    handleInputChange(
-                                       "seniority_id",
-                                       e.target.value
-                                    )
-                                 }
-                                 className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                 <option value="">
-                                    Select seniority level
-                                 </option>
-                                 {seniorities.map((seniority) => (
-                                    <option
-                                       key={seniority.seniority_id}
-                                       value={seniority.seniority_id}
-                                    >
-                                       {seniority.seniority_name}
-                                    </option>
-                                 ))}
-                              </select>
-                           )}
-                        </div>
                      </div>
 
                      <div className="space-y-2">
                         <label
-                           htmlFor="capacity"
+                           htmlFor="last_name"
                            className="text-sm font-medium text-slate-900"
                         >
-                           Weekly Capacity (hours)
+                           Last Name
                         </label>
                         <Input
-                           id="capacity"
-                           type="number"
-                           step="0.5"
-                           min="0"
-                           max="168"
-                           value={formData.capacity}
+                           id="last_name"
+                           type="text"
+                           value={formData.last_name}
                            onChange={(e) =>
-                              handleInputChange(
-                                 "capacity",
-                                 parseFloat(e.target.value) || 0
-                              )
+                              handleInputChange("last_name", e.target.value)
                            }
-                           placeholder="40"
+                           placeholder="Doe"
                            required
                         />
-                        <div className="text-xs text-slate-500">
-                           Enter weekly working hours (e.g., 40 for full-time,
-                           20 for part-time)
-                        </div>
+                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label
+                        htmlFor="email"
+                        className="text-sm font-medium text-slate-900"
+                     >
+                        Email Address
+                     </label>
+                     <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                           handleInputChange("email", e.target.value)
+                        }
+                        placeholder="john.doe@company.com"
+                        required
+                     />
+                  </div>
+
+                  <div className="space-y-2">
+                     <label
+                        htmlFor="title"
+                        className="text-sm font-medium text-slate-900"
+                     >
+                        Job Title
+                     </label>
+                     <Input
+                        id="title"
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) =>
+                           handleInputChange("title", e.target.value)
+                        }
+                        placeholder="Software Engineer"
+                        required
+                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <label
+                           htmlFor="time_zone"
+                           className="text-sm font-medium text-slate-900"
+                        >
+                           Time Zone{" "}
+                           <span className="text-slate-500 font-normal">
+                              (optional)
+                           </span>
+                        </label>
+                        <Input
+                           id="time_zone"
+                           type="text"
+                           value={formData.time_zone || ""}
+                           onChange={(e) =>
+                              handleInputChange("time_zone", e.target.value)
+                           }
+                           placeholder="America/New_York"
+                        />
                      </div>
 
-                     <div className="flex justify-end space-x-4 pt-4">
-                        <Button
-                           type="button"
-                           variant="outline"
-                           onClick={onClose}
-                           disabled={loading}
+                     <div className="space-y-2">
+                        <label
+                           htmlFor="seniority_id"
+                           className="text-sm font-medium text-slate-900"
                         >
-                           Cancel
-                        </Button>
-                        <Button type="submit" disabled={loading}>
-                           {loading
-                              ? staffer
-                                 ? "Updating..."
-                                 : "Creating..."
-                              : staffer
-                              ? "Update Staffer"
-                              : "Create Staffer"}
-                        </Button>
+                           Seniority Level{" "}
+                           <span className="text-slate-500 font-normal">
+                              (optional)
+                           </span>
+                        </label>
+                        {seniorities.length === 0 ? (
+                           <div className="text-sm text-slate-500">
+                              Loading seniorities...
+                           </div>
+                        ) : (
+                           <select
+                              id="seniority_id"
+                              value={formData.seniority_id || ""}
+                              onChange={(e) =>
+                                 handleInputChange(
+                                    "seniority_id",
+                                    e.target.value
+                                 )
+                              }
+                              className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           >
+                              <option value="">Select seniority level</option>
+                              {seniorities.map((seniority) => (
+                                 <option
+                                    key={seniority.seniority_id}
+                                    value={seniority.seniority_id}
+                                 >
+                                    {seniority.seniority_name}
+                                 </option>
+                              ))}
+                           </select>
+                        )}
                      </div>
-                  </form>
-               </CardContent>
-            </Card>
-         </div>
-      </div>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label
+                        htmlFor="capacity"
+                        className="text-sm font-medium text-slate-900"
+                     >
+                        Weekly Capacity (hours)
+                     </label>
+                     <Input
+                        id="capacity"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="168"
+                        value={formData.capacity}
+                        onChange={(e) =>
+                           handleInputChange(
+                              "capacity",
+                              parseFloat(e.target.value) || 0
+                           )
+                        }
+                        placeholder="40"
+                        required
+                     />
+                     <div className="text-xs text-slate-500">
+                        Enter weekly working hours (e.g., 40 for full-time, 20
+                        for part-time)
+                     </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-4 pt-4">
+                     <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        disabled={loading}
+                     >
+                        Cancel
+                     </Button>
+                     <Button type="submit" disabled={loading}>
+                        {loading
+                           ? staffer
+                              ? "Updating..."
+                              : "Creating..."
+                           : staffer
+                           ? "Update Staffer"
+                           : "Create Staffer"}
+                     </Button>
+                  </div>
+               </form>
+            </CardContent>
+         </Card>
+      </Modal>
    );
 }
