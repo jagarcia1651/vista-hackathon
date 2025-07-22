@@ -1,0 +1,11 @@
+-- Update clients with their primary and billing contact IDs
+UPDATE "public"."clients" SET "primary_contact_id" = '0945dd77-c4d2-4435-ae63-7f29e59661b0', "billing_contact_id" = 'ad9f5f8d-f13a-44e6-861e-79db32683c2c' WHERE "client_id" = '0945dd77-c4d2-4435-ae63-7f29e59661b0';
+UPDATE "public"."clients" SET "primary_contact_id" = '1cede5cd-f52c-447f-9de3-78c567f0075d', "billing_contact_id" = null WHERE "client_id" = '1cede5cd-f52c-447f-9de3-78c567f0075d';
+UPDATE "public"."clients" SET "primary_contact_id" = '4c075531-642b-48c6-9c88-281afcbc9100', "billing_contact_id" = null WHERE "client_id" = '4c075531-642b-48c6-9c88-281afcbc9100';
+UPDATE "public"."clients" SET "primary_contact_id" = '610646bd-8d9b-4547-8a69-966422687944', "billing_contact_id" = null WHERE "client_id" = '610646bd-8d9b-4547-8a69-966422687944';
+UPDATE "public"."clients" SET "primary_contact_id" = '22c6c330-f533-4c71-804a-f14d05008b52', "billing_contact_id" = null WHERE "client_id" = '6151c4b0-c147-4788-87b3-49a868ebb485';
+UPDATE "public"."clients" SET "primary_contact_id" = '6785a742-261e-4b03-be41-1bd0f4c6fc08', "billing_contact_id" = '3cebd968-7d35-4a36-8a9e-6dfb91f53de3' WHERE "client_id" = '6785a742-261e-4b03-be41-1bd0f4c6fc08';
+UPDATE "public"."clients" SET "primary_contact_id" = '6e85d288-9e9f-4239-b353-4b3a154572d0', "billing_contact_id" = 'f2b9b2e7-93f0-4f1d-9b4c-3cc79cbfe383' WHERE "client_id" = '6e85d288-9e9f-4239-b353-4b3a154572d0';
+UPDATE "public"."clients" SET "primary_contact_id" = '8cc14278-063d-4e94-83fc-b3cc104406eb', "billing_contact_id" = 'd98a5e49-3e37-4c7d-b2a1-0b9b087e0e38' WHERE "client_id" = '8cc14278-063d-4e94-83fc-b3cc104406eb';
+UPDATE "public"."clients" SET "primary_contact_id" = 'c0c5dc68-3c0e-4a08-8921-e488744f531b', "billing_contact_id" = null WHERE "client_id" = 'c0c5dc68-3c0e-4a08-8921-e488744f531b';
+UPDATE "public"."clients" SET "primary_contact_id" = 'd1767e2b-eb2f-40dc-a6f0-5fa31e966453', "billing_contact_id" = null WHERE "client_id" = 'd1767e2b-eb2f-40dc-a6f0-5fa31e966453';
