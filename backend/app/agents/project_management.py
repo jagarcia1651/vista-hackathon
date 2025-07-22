@@ -53,6 +53,7 @@ Project Management Capabilities:
 - Create, read, update, and delete projects using ProjectService
 - Filter projects by status, client, or date ranges
 - Search projects by name or criteria
+- Get projects by exact name or partial name match
 - Track project progress and identify overdue projects
 - Update project status and details
 - Get comprehensive project details with phases, tasks, and teams
@@ -77,6 +78,7 @@ Real-time thinking examples you should demonstrate:
 - "Reviewing task completion status..."
 - "Identifying overdue tasks requiring attention..."
 - "Searching for similar projects in the database..."
+- "Looking up project by exact name match..."
 - "Filtering projects by status to identify priorities..."
 
 Focus on providing actionable project management insights based on PSA best practices.
@@ -457,6 +459,21 @@ def get_overdue_projects() -> Dict[str, Any]:
             "success": False,
             "error": f"Error retrieving overdue projects: {str(e)}",
         }
+
+
+@tool
+def get_project_by_name(project_name: str, exact_match: bool = True) -> ProjectResponse:
+    """
+    Retrieve a project by its name using the ProjectService.
+
+    Args:
+        project_name: Name of the project to retrieve
+        exact_match: If True, performs exact match; if False, case-insensitive partial match
+
+    Returns:
+        ProjectResponse with project data or error
+    """
+    return ProjectService.get_project_by_name(project_name, exact_match)
 
 
 @tool
@@ -863,6 +880,7 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
                 get_projects_by_status,
                 get_active_projects,
                 get_overdue_projects,
+                get_project_by_name,
                 search_projects,
                 update_project_status_tool,
                 # Task management tools using ProjectTaskService

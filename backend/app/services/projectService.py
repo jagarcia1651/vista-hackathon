@@ -343,6 +343,69 @@ class ProjectService:
             return []
 
     @staticmethod
+    def get_project_by_name(
+        project_name: str, exact_match: bool = True
+    ) -> ProjectResponse:
+        """
+        Retrieve a project by its name.
+
+        Args:
+            project_name: Name of the project to retrieve
+            exact_match: If True, performs exact match; if False, case-insensitive partial match
+
+        Returns:
+            ProjectResponse with project data or error
+        """
+        try:
+            if not supabase_client:
+                return ProjectResponse(
+                    success=False, error="Database connection not available"
+                )
+
+            if exact_match:
+                result = (
+                    supabase_client.table("projects")
+                    .select("*")
+                    .eq("project_name", project_name)
+                    .execute()
+                )
+            else:
+                result = (
+                    supabase_client.table("projects")
+                    .select("*")
+                    .ilike("project_name", f"%{project_name}%")
+                    .order("created_at")
+                    .execute()
+                )
+
+            if result.data and len(result.data) > 0:
+                if exact_match and len(result.data) == 1:
+                    project = Project(**result.data[0])
+                    return ProjectResponse(success=True, project=project)
+                elif exact_match and len(result.data) > 1:
+                    return ProjectResponse(
+                        success=False,
+                        error=f"Multiple projects found with exact name '{project_name}'",
+                    )
+                else:
+                    # For partial match, return the first result
+                    project = Project(**result.data[0])
+                    return ProjectResponse(
+                        success=True,
+                        project=project,
+                        message=f"Found project using partial match (total matches: {len(result.data)})",
+                    )
+            else:
+                match_type = "exact" if exact_match else "partial"
+                return ProjectResponse(
+                    success=False,
+                    error=f"No project found with {match_type} name match for '{project_name}'",
+                )
+
+        except Exception as e:
+            return ProjectResponse(success=False, error=f"Database error: {str(e)}")
+
+    @staticmethod
     def search_projects(search_term: str) -> List[Project]:
         """
         Search projects by name (case-insensitive partial match).
