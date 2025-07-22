@@ -8,6 +8,7 @@ import { Modal } from "@/components/shared/Modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProjectPhase } from "@/types/project";
 import { phaseService } from "../services/phaseService";
+import { TeamAssignmentSection } from "./TeamAssignmentSection";
 
 type PhaseStatus =
    | "Planned"
@@ -184,7 +185,7 @@ export function PhaseModal({
    };
 
    return (
-      <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-4xl" stretch>
          <Card>
             <CardHeader>
                <CardTitle>
@@ -192,79 +193,99 @@ export function PhaseModal({
                </CardTitle>
             </CardHeader>
             <CardContent>
-               <form onSubmit={handleSubmit} className="space-y-4">
+               <form onSubmit={handleSubmit} className="space-y-6">
                   {error && (
                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
                         {error}
                      </div>
                   )}
 
-                  <div className="space-y-2">
-                     <label className="text-sm font-medium">Phase Name</label>
-                     <Input
-                        name="project_phase_name"
-                        value={formData.project_phase_name || ""}
-                        onChange={handleInputChange}
-                        placeholder="Enter phase name"
-                        required
-                     />
-                  </div>
-
-                  <div className="space-y-2">
-                     <label className="text-sm font-medium">Description</label>
-                     <Textarea
-                        name="project_phase_description"
-                        value={formData.project_phase_description || ""}
-                        onChange={handleInputChange}
-                        placeholder="Enter phase description"
-                        required
-                     />
-                  </div>
-
-                  <div className="space-y-2">
-                     <label className="text-sm font-medium">Status</label>
-                     <select
-                        name="project_phase_status"
-                        value={formData.project_phase_status}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border rounded-md"
-                        required
-                     >
-                        {PHASE_STATUSES.map(status => (
-                           <option key={status} value={status}>
-                              {status}
-                           </option>
-                        ))}
-                     </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                      <div className="space-y-2">
                         <label className="text-sm font-medium">
-                           Start Date
+                           Phase Name
                         </label>
                         <Input
-                           type="date"
-                           name="project_phase_start_date"
-                           value={formData.project_phase_start_date || ""}
+                           name="project_phase_name"
+                           value={formData.project_phase_name || ""}
                            onChange={handleInputChange}
+                           placeholder="Enter phase name"
                            required
                         />
                      </div>
 
                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Due Date</label>
-                        <Input
-                           type="date"
-                           name="project_phase_due_date"
-                           value={formData.project_phase_due_date || ""}
+                        <label className="text-sm font-medium">
+                           Description
+                        </label>
+                        <Textarea
+                           name="project_phase_description"
+                           value={formData.project_phase_description || ""}
                            onChange={handleInputChange}
+                           placeholder="Enter phase description"
                            required
                         />
                      </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <label className="text-sm font-medium">Status</label>
+                           <select
+                              name="project_phase_status"
+                              value={formData.project_phase_status}
+                              onChange={handleInputChange}
+                              className="w-full px-3 py-2 border rounded-md"
+                              required
+                           >
+                              {PHASE_STATUSES.map(status => (
+                                 <option key={status} value={status}>
+                                    {status}
+                                 </option>
+                              ))}
+                           </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                 Start Date
+                              </label>
+                              <Input
+                                 type="date"
+                                 name="project_phase_start_date"
+                                 value={formData.project_phase_start_date || ""}
+                                 onChange={handleInputChange}
+                                 required
+                              />
+                           </div>
+
+                           <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                 Due Date
+                              </label>
+                              <Input
+                                 type="date"
+                                 name="project_phase_due_date"
+                                 value={formData.project_phase_due_date || ""}
+                                 onChange={handleInputChange}
+                                 required
+                              />
+                           </div>
+                        </div>
+                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
+                  {isEditing && (
+                     <div className="space-y-2">
+                        <h3 className="text-sm font-medium">Team Assignment</h3>
+                        <TeamAssignmentSection
+                           projectId={projectId}
+                           phaseId={phase?.project_phase_id}
+                        />
+                     </div>
+                  )}
+
+                  <div className="flex justify-end gap-3">
                      <Button
                         type="button"
                         variant="outline"

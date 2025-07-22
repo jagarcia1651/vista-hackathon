@@ -10,6 +10,7 @@ interface ModalProps {
    backdropClassName?: string; // Additional styling for the backdrop
    closeOnBackdropClick?: boolean; // Whether clicking backdrop closes modal
    preventScroll?: boolean; // Whether to prevent body scroll when modal is open
+   stretch?: boolean; // Whether the modal should stretch to 90% width on larger screens
 }
 
 export function Modal({
@@ -22,6 +23,7 @@ export function Modal({
    backdropClassName = "",
    closeOnBackdropClick = true,
    preventScroll = true,
+   stretch = false
 }: ModalProps) {
    // Prevent body scroll when modal is open
    if (typeof document !== "undefined" && preventScroll) {
@@ -48,9 +50,22 @@ export function Modal({
 
    if (!isOpen) return null;
 
+   const modalClasses = [
+      "relative",
+      "z-50",
+      "w-full",
+      stretch ? "w-[90vw]" : maxWidth,
+      maxHeight,
+      "overflow-y-auto",
+      "overflow-x-hidden",
+      className
+   ]
+      .filter(Boolean)
+      .join(" ");
+
    return (
       <div
-         className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+         className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
          onKeyDown={handleKeyDown}
          tabIndex={-1}
       >
@@ -61,11 +76,7 @@ export function Modal({
          />
 
          {/* Modal Content */}
-         <div
-            className={`relative z-50 w-full ${maxWidth} ${maxHeight} overflow-y-auto ${className}`}
-         >
-            {children}
-         </div>
+         <div className={modalClasses}>{children}</div>
       </div>
    );
 }

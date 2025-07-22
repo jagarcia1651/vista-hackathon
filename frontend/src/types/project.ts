@@ -6,7 +6,7 @@ import { BaseEntity, ProjectStatus, TaskStatus } from "./base";
 import type { Client } from "./client";
 import type { Staffer } from "./staffer";
 
-export interface Project extends BaseEntity {
+export interface Project {
    project_id: string;
    client_id: string;
    project_name: string;
@@ -44,6 +44,12 @@ export interface ProjectTeam extends BaseEntity {
    project_team_name: string;
    project_id: string;
    project_phase_id: string;
+}
+
+export interface ProjectTeamMembership extends BaseEntity {
+   project_team_membership_id: string;
+   project_team_id: string;
+   staffer_id: string;
 }
 
 export interface StafferAssignment extends BaseEntity {
