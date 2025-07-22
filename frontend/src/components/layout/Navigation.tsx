@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
+import Link from 'next/link'
 
 export function Navigation() {
   const { user, loading, signOut } = useAuth()
@@ -42,6 +42,12 @@ export function Navigation() {
                   className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium"
                 >
                   Dashboard
+                </Link>
+                <Link 
+                  href="/quotes" 
+                  className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium"
+                >
+                  Quotes
                 </Link>
                 <Link 
                   href="/db" 
