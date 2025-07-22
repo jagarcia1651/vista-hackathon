@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -7,6 +8,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from .agents.orchestrator import run as orchestrator_run
+from .agents.project_management import (
+    analyze_project_health,
+    create_comprehensive_project_plan,
+    project_management_agent,
+)
 from .config import agent_config, app_config
 
 app = FastAPI(
@@ -42,6 +48,23 @@ class QuoteRequest(BaseModel):
     team_data: List[Dict[str, Any]]
 
 
+class ProjectManagementRequest(BaseModel):
+    query: str
+    project_context: Optional[str] = None
+
+
+class ProjectCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    client_id: str
+    duration: Optional[str] = None
+    budget: Optional[str] = None
+    team_size: Optional[str] = None
+    project_status: str = "RFP"
+    project_start_date: Optional[str] = None
+    project_due_date: Optional[str] = None
+
+
 class CapacityAnalysisRequest(BaseModel):
     projects: List[Dict[str, Any]]
     resources: List[Dict[str, Any]]
@@ -74,6 +97,9 @@ async def root():
             "health": "/health",
             "agent_query": "/api/v1/agent/query",
             "project_plan": "/api/v1/agent/project-plan",
+            "project_management": "/api/v1/project-management/query",
+            "project_create": "/api/v1/project-management/create",
+            "project_analyze": "/api/v1/project-management/analyze/{project_id}",
             "quote": "/api/v1/agent/quote",
             "capacity": "/api/v1/agent/capacity-analysis",
         },
@@ -132,6 +158,65 @@ async def generate_quote(request: QuoteRequest):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Quote generation failed: {str(e)}"
+        )
+
+
+# Project Management API endpoints
+@app.post("/api/v1/project-management/query")
+async def project_management_query(request: ProjectManagementRequest):
+    """
+    Handle project management queries with database integration
+    """
+    try:
+        result = project_management_agent(request.query, request.project_context)
+        return {
+            "response": result,
+            "agent": "project_management",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Project management query failed: {str(e)}"
+        )
+
+
+@app.post("/api/v1/project-management/create")
+async def create_project_plan_endpoint(request: ProjectCreateRequest):
+    """
+    Create a comprehensive project plan with database integration
+    """
+    try:
+        project_data = {
+            "name": request.name,
+            "description": request.description,
+            "client_id": request.client_id,
+            "duration": request.duration,
+            "budget": request.budget,
+            "team_size": request.team_size,
+            "project_status": request.project_status,
+            "project_start_date": request.project_start_date,
+            "project_due_date": request.project_due_date,
+        }
+
+        result = create_comprehensive_project_plan(project_data)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Project creation failed: {str(e)}"
+        )
+
+
+@app.get("/api/v1/project-management/analyze/{project_id}")
+async def analyze_project_endpoint(project_id: str):
+    """
+    Analyze project health and provide recommendations
+    """
+    try:
+        result = analyze_project_health(project_id)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Project analysis failed: {str(e)}"
         )
 
 
