@@ -157,15 +157,15 @@ export function StafferModal({
    }
 
    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
          {/* Backdrop */}
          <div
-            className="absolute inset-0 bg-slate-900 bg-opacity-50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onClose}
          />
 
          {/* Modal */}
-         <div className="relative z-10 w-full max-w-md mx-4">
+         <div className="relative z-50 w-full max-w-md">
             <Card>
                <CardHeader>
                   <CardTitle>
