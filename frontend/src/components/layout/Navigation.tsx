@@ -27,13 +27,17 @@ export function Navigation() {
    // Close user menu when clicking outside
    useEffect(() => {
       function handleClickOutside(event: MouseEvent) {
-         if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+         if (
+            userMenuRef.current &&
+            !userMenuRef.current.contains(event.target as Node)
+         ) {
             setIsUserMenuOpen(false);
          }
       }
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+         document.removeEventListener("mousedown", handleClickOutside);
    }, []);
 
    if (loading) {
@@ -45,10 +49,9 @@ export function Navigation() {
                   <h1 className="text-xl font-semibold text-sidebar-foreground">
                      ProjectAI
                   </h1>
-                  <div className="text-sm text-sidebar-foreground/60">Loading...</div>
                </div>
             </header>
-            
+
             {/* Desktop sidebar */}
             <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border">
                <div className="flex flex-col h-full">
@@ -56,9 +59,6 @@ export function Navigation() {
                      <h1 className="text-xl font-semibold text-sidebar-foreground">
                         ProjectAI
                      </h1>
-                  </div>
-                  <div className="flex-1 px-4">
-                     <div className="text-sm text-sidebar-foreground/60">Loading...</div>
                   </div>
                </div>
             </aside>
@@ -71,7 +71,7 @@ export function Navigation() {
       { name: "Staffers", href: "/staffers", icon: Users },
       { name: "Quotes", href: "/quotes", icon: FileText },
       { name: "Projects", href: "/projects", icon: FolderOpen },
-      { name: "Database", href: "/db", icon: Database },
+      { name: "Database", href: "/db", icon: Database }
    ];
 
    const isActiveLink = (href: string) => {
@@ -81,10 +81,10 @@ export function Navigation() {
 
    const NavItems = () => (
       <ul className="space-y-2">
-         {navigation.map((item) => {
+         {navigation.map(item => {
             const Icon = item.icon;
             const isActive = isActiveLink(item.href);
-            
+
             return (
                <li key={item.name}>
                   <Link
@@ -107,9 +107,9 @@ export function Navigation() {
 
    const UserSection = () => {
       // Extract first letter of email for avatar and create display name
-      const userInitial = user?.email?.charAt(0).toUpperCase() || 'U';
-      const userName = user?.email?.split('@')[0] || 'User';
-      
+      const userInitial = user?.email?.charAt(0).toUpperCase() || "U";
+      const userName = user?.email?.split("@")[0] || "User";
+
       return (
          <div className="p-4 border-t border-sidebar-border">
             {user ? (
@@ -129,9 +129,11 @@ export function Navigation() {
                            ProjectAI
                         </div>
                      </div>
-                     <ChevronUp className={`w-4 h-4 text-sidebar-foreground/60 transition-transform ${
-                        isUserMenuOpen ? 'rotate-180' : ''
-                     }`} />
+                     <ChevronUp
+                        className={`w-4 h-4 text-sidebar-foreground/60 transition-transform ${
+                           isUserMenuOpen ? "rotate-180" : ""
+                        }`}
+                     />
                   </button>
 
                   {/* Dropdown Menu */}
@@ -198,16 +200,18 @@ export function Navigation() {
 
          {/* Mobile Menu Overlay */}
          {isMobileMenuOpen && (
-            <div 
+            <div
                className="lg:hidden fixed inset-0 z-40 bg-black/50"
                onClick={() => setIsMobileMenuOpen(false)}
             />
          )}
 
          {/* Mobile Menu */}
-         <aside className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border z-50 transform transition-transform duration-200 ease-in-out ${
-            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-         }`}>
+         <aside
+            className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border z-50 transform transition-transform duration-200 ease-in-out ${
+               isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+         >
             <div className="flex flex-col h-full">
                {user && (
                   <nav className="flex-1 px-4 py-6">
