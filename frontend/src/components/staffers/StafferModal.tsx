@@ -161,8 +161,15 @@ export function StafferModal({
    if (!isOpen) return null;
 
    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+         {/* Backdrop with blur */}
+         <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+         />
+
+         {/* Modal Content */}
+         <div className="relative z-50 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <Card>
                <CardHeader>
                   <CardTitle>
