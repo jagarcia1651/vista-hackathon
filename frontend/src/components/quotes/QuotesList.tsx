@@ -43,9 +43,10 @@ interface QuotesListProps {
   projects: Project[]
   staffers: Staffer[]
   clientContacts: ClientContact[]
+  onRefresh?: () => Promise<void>
 }
 
-export function QuotesList({ quotes, projects, staffers, clientContacts }: QuotesListProps) {
+export function QuotesList({ quotes, projects, staffers, clientContacts, onRefresh }: QuotesListProps) {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -58,6 +59,18 @@ export function QuotesList({ quotes, projects, staffers, clientContacts }: Quote
   const handleDelete = (quote: Quote) => {
     setSelectedQuote(quote)
     setShowDeleteModal(true)
+  }
+
+  const handleEditSuccess = async () => {
+    setShowEditModal(false)
+    setSelectedQuote(null)
+    if (onRefresh) await onRefresh()
+  }
+
+  const handleDeleteSuccess = async () => {
+    setShowDeleteModal(false)
+    setSelectedQuote(null)
+    if (onRefresh) await onRefresh()
   }
 
   const getProjectName = (projectId: string | null) => {
@@ -202,10 +215,8 @@ export function QuotesList({ quotes, projects, staffers, clientContacts }: Quote
           projects={projects}
           staffers={staffers}
           clientContacts={clientContacts}
-          onClose={() => {
-            setShowEditModal(false)
-            setSelectedQuote(null)
-          }}
+          onClose={handleEditSuccess}
+          onSuccess={onRefresh}
         />
       )}
 
@@ -213,10 +224,8 @@ export function QuotesList({ quotes, projects, staffers, clientContacts }: Quote
       {showDeleteModal && selectedQuote && (
         <DeleteQuoteModal
           quote={selectedQuote}
-          onClose={() => {
-            setShowDeleteModal(false)
-            setSelectedQuote(null)
-          }}
+          onClose={handleDeleteSuccess}
+          onSuccess={onRefresh}
         />
       )}
     </>
