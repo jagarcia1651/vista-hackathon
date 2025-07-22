@@ -1,33 +1,16 @@
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - WATCHPACK_POLLING=true
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - PYTHONPATH=/app
-    volumes:
-      - ./backend/app:/app/app
-    restart: unless-stopped
+   backend:
+      build:
+         context: ./backend
+         dockerfile: Dockerfile
+      ports:
+         - "8000:8000"
+      environment:
+         - PYTHONPATH=/app
+      volumes:
+         - ./backend/app:/app/app
+      restart: unless-stopped
 
 networks:
-  default:
-    name: psa-network 
+   default:
+      name: psa-network
