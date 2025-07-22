@@ -5,6 +5,8 @@ services:
          dockerfile: Dockerfile
       ports:
          - "8000:8000"
+      env_file:
+         - ./backend/.env.local
       environment:
          - PYTHONPATH=/app
       volumes:

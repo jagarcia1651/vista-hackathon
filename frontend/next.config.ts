@@ -2,15 +2,23 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // Disable file system cache in development to prevent permission issues
-  ...(process.env.NODE_ENV === 'development' && {
-    onDemandEntries: {
-      // Period (in ms) where the server will keep pages in the buffer
-      maxInactiveAge: 25 * 1000,
-      // Number of pages that should be kept simultaneously without being disposed
-      pagesBufferLength: 2,
+  async rewrites() {
+    // Use environment variable for API URL, fallback to localhost for local dev
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiUrl}/api/v1/:path*`,
+      },
+    ]
+  },
+  // Updated configuration for stable Turbopack
+  turbopack: {
+    resolveAlias: {
+      canvas: './empty-module.js',
     },
-  }),
+  },
 };
 
 export default nextConfig;
