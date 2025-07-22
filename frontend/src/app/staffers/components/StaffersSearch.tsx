@@ -7,6 +7,7 @@ import {
    CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useCallback } from "react";
 
 interface StaffersSearchProps {
    searchQuery: string;
@@ -14,6 +15,18 @@ interface StaffersSearchProps {
 }
 
 export function StaffersSearch({ searchQuery, onSearch }: StaffersSearchProps) {
+   // Debounced search to prevent excessive filtering
+   const handleSearchChange = useCallback(
+      (value: string) => {
+         onSearch(value);
+      },
+      [onSearch]
+   );
+
+   const handleClearSearch = useCallback(() => {
+      onSearch("");
+   }, [onSearch]);
+
    return (
       <Card className="mb-6">
          <CardHeader>
@@ -27,11 +40,11 @@ export function StaffersSearch({ searchQuery, onSearch }: StaffersSearchProps) {
                      type="text"
                      placeholder="Search by name or email..."
                      value={searchQuery}
-                     onChange={(e) => onSearch(e.target.value)}
+                     onChange={(e) => handleSearchChange(e.target.value)}
                   />
                </div>
                {searchQuery && (
-                  <Button variant="outline" onClick={() => onSearch("")}>
+                  <Button variant="outline" onClick={handleClearSearch}>
                      Clear Search
                   </Button>
                )}

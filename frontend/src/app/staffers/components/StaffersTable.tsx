@@ -5,12 +5,10 @@ import {
    CardHeader,
    CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
 import {
    Seniority,
    Staffer,
 } from "../../../../../shared/schemas/typescript/staffer";
-import { seniorityService } from "../services/seniorityService";
 import { StafferRow } from "./StafferRow";
 import { StaffersEmptyState } from "./StaffersEmptyState";
 
@@ -18,6 +16,7 @@ interface StaffersTableProps {
    staffers: Staffer[];
    searchQuery: string;
    deleteLoading: string | null;
+   seniorities: Seniority[];
    onEdit: (staffer: Staffer) => void;
    onDelete: (staffer: Staffer) => void;
    onCreateNew: () => void;
@@ -27,23 +26,11 @@ export function StaffersTable({
    staffers,
    searchQuery,
    deleteLoading,
+   seniorities,
    onEdit,
    onDelete,
    onCreateNew,
 }: StaffersTableProps) {
-   const [seniorities, setSeniorities] = useState<Seniority[]>([]);
-
-   // Fetch seniorities on component mount
-   useEffect(() => {
-      const fetchSeniorities = async () => {
-         const result = await seniorityService.getAllSeniorities();
-         if (result.data) {
-            setSeniorities(result.data);
-         }
-      };
-      fetchSeniorities();
-   }, []);
-
    return (
       <Card>
          <CardHeader>

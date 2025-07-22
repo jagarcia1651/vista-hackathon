@@ -1,10 +1,7 @@
 "use client";
 
-import { seniorityService } from "@/app/staffers/services/seniorityService";
-import {
-   CreateStafferData,
-   stafferService,
-} from "@/app/staffers/services/stafferService";
+import { useStaffers } from "@/app/staffers/contexts/StaffersContext";
+import { CreateStafferData } from "@/app/staffers/services/stafferService";
 import { Button } from "@/components/ui/button";
 import {
    Card,
@@ -15,10 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
-import {
-   Seniority,
-   Staffer,
-} from "../../../../shared/schemas/typescript/staffer";
+import { Staffer } from "../../../../shared/schemas/typescript/staffer";
 
 interface StafferModalProps {
    isOpen: boolean;
@@ -30,66 +24,53 @@ interface StafferModalProps {
 export function StafferModal({
    isOpen,
    onClose,
-   staffer,
+   staffer = null,
    onSuccess,
 }: StafferModalProps) {
+   const { seniorities, createStaffer, updateStaffer } = useStaffers();
+
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState("");
+
    const [formData, setFormData] = useState<CreateStafferData>({
       first_name: "",
       last_name: "",
       email: "",
       time_zone: "",
       title: "",
-      capacity: 40, // Default to 40 hours per week
+      seniority_id: "",
+      capacity: 40,
    });
-   const [loading, setLoading] = useState(false);
-   const [error, setError] = useState("");
-   const [seniorities, setSeniorities] = useState<Seniority[]>([]);
-   const [seniorityLoading, setSeniorityLoading] = useState(false);
-
-   // Fetch seniorities when modal opens
-   useEffect(() => {
-      if (isOpen && seniorities.length === 0) {
-         const fetchSeniorities = async () => {
-            setSeniorityLoading(true);
-            const result = await seniorityService.getAllSeniorities();
-            if (result.data) {
-               setSeniorities(result.data);
-            }
-            setSeniorityLoading(false);
-         };
-         fetchSeniorities();
-      }
-   }, [isOpen, seniorities.length]);
 
    // Reset form when modal opens/closes or staffer changes
    useEffect(() => {
       if (isOpen) {
          if (staffer) {
-            // Edit mode - populate form with existing data
+            // Populate form with existing staffer data
             setFormData({
                first_name: staffer.first_name || "",
                last_name: staffer.last_name || "",
                email: staffer.email || "",
                time_zone: staffer.time_zone || "",
-               title: staffer.title,
-               capacity: staffer.capacity,
-               seniority_id: staffer.seniority_id,
-               user_id: staffer.user_id,
+               title: staffer.title || "",
+               seniority_id: staffer.seniority_id || "",
+               capacity: staffer.capacity || 40,
             });
          } else {
-            // Create mode - reset form
+            // Reset form for new staffer
             setFormData({
                first_name: "",
                last_name: "",
                email: "",
                time_zone: "",
                title: "",
-               capacity: 40, // Default to 40 hours per week
+               seniority_id: "",
+               capacity: 40,
             });
          }
          setError("");
       }
-   }, [isOpen, staffer]);
+   }, [staffer, isOpen]);
 
    const handleInputChange = (
       field: keyof CreateStafferData,
@@ -101,7 +82,8 @@ export function StafferModal({
       }));
    };
 
-   const validateForm = () => {
+   const validateForm = (): boolean => {
+      // Basic validation
       if (!formData.first_name.trim()) {
          setError("First name is required");
          return false;
@@ -114,19 +96,22 @@ export function StafferModal({
          setError("Email is required");
          return false;
       }
-      if (!formData.email.includes("@")) {
-         setError("Please enter a valid email address");
-         return false;
-      }
       if (!formData.title.trim()) {
          setError("Title is required");
          return false;
       }
       if (formData.capacity <= 0 || formData.capacity > 168) {
-         // Max 168 hours per week
          setError("Capacity must be between 0 and 168 hours per week");
          return false;
       }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+         setError("Please enter a valid email address");
+         return false;
+      }
+
       return true;
    };
 
@@ -141,8 +126,6 @@ export function StafferModal({
       setError("");
 
       try {
-         let result;
-
          // Clean up the form data - remove empty fields if not provided
          const cleanedData = {
             ...formData,
@@ -150,23 +133,24 @@ export function StafferModal({
             seniority_id: formData.seniority_id?.trim() || undefined,
          };
 
-         if (staffer) {
+         let success = false;
+
+         if (staffer?.id) {
             // Update existing staffer
-            result = await stafferService.updateStaffer({
+            success = await updateStaffer({
                id: staffer.id,
                ...cleanedData,
             });
          } else {
             // Create new staffer
-            result = await stafferService.createStaffer(cleanedData);
+            success = await createStaffer(cleanedData);
          }
 
-         if (result.error) {
-            setError(result.error);
-         } else {
+         if (success) {
             onSuccess();
             onClose();
          }
+         // If not successful, error will be displayed from context
       } catch (err) {
          setError("An unexpected error occurred");
       } finally {
@@ -174,20 +158,11 @@ export function StafferModal({
       }
    };
 
-   if (!isOpen) {
-      return null;
-   }
+   if (!isOpen) return null;
 
    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-         {/* Backdrop */}
-         <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
-         />
-
-         {/* Modal */}
-         <div className="relative z-50 w-full max-w-md">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <Card>
                <CardHeader>
                   <CardTitle>
@@ -252,7 +227,7 @@ export function StafferModal({
                            htmlFor="email"
                            className="text-sm font-medium text-slate-900"
                         >
-                           Email
+                           Email Address
                         </label>
                         <Input
                            id="email"
@@ -268,31 +243,10 @@ export function StafferModal({
 
                      <div className="space-y-2">
                         <label
-                           htmlFor="time_zone"
-                           className="text-sm font-medium text-slate-900"
-                        >
-                           Time Zone{" "}
-                           <span className="text-slate-500 text-xs">
-                              (optional)
-                           </span>
-                        </label>
-                        <Input
-                           id="time_zone"
-                           type="text"
-                           value={formData.time_zone || ""}
-                           onChange={(e) =>
-                              handleInputChange("time_zone", e.target.value)
-                           }
-                           placeholder="America/New_York"
-                        />
-                     </div>
-
-                     <div className="space-y-2">
-                        <label
                            htmlFor="title"
                            className="text-sm font-medium text-slate-900"
                         >
-                           Title
+                           Job Title
                         </label>
                         <Input
                            id="title"
@@ -301,52 +255,73 @@ export function StafferModal({
                            onChange={(e) =>
                               handleInputChange("title", e.target.value)
                            }
-                           placeholder="Senior Consultant"
+                           placeholder="Software Engineer"
                            required
                         />
                      </div>
 
-                     <div className="space-y-2">
-                        <label
-                           htmlFor="seniority_id"
-                           className="text-sm font-medium text-slate-900"
-                        >
-                           Seniority{" "}
-                           <span className="text-slate-500 text-xs">
-                              (optional)
-                           </span>
-                        </label>
-                        {seniorityLoading ? (
-                           <div className="text-sm text-slate-500">
-                              Loading seniorities...
-                           </div>
-                        ) : (
-                           <select
-                              id="seniority_id"
-                              value={formData.seniority_id || ""}
-                              onChange={(e) =>
-                                 handleInputChange(
-                                    "seniority_id",
-                                    e.target.value
-                                 )
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 font-medium"
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <label
+                              htmlFor="time_zone"
+                              className="text-sm font-medium text-slate-900"
                            >
-                              <option value="" className="text-slate-600">
-                                 Select a seniority level
-                              </option>
-                              {seniorities.map((seniority) => (
-                                 <option
-                                    key={seniority.seniority_id}
-                                    value={seniority.seniority_id}
-                                    className="text-slate-900 font-medium"
-                                 >
-                                    {seniority.seniority_name} (Level{" "}
-                                    {seniority.seniority_level})
+                              Time Zone{" "}
+                              <span className="text-slate-500 font-normal">
+                                 (optional)
+                              </span>
+                           </label>
+                           <Input
+                              id="time_zone"
+                              type="text"
+                              value={formData.time_zone || ""}
+                              onChange={(e) =>
+                                 handleInputChange("time_zone", e.target.value)
+                              }
+                              placeholder="America/New_York"
+                           />
+                        </div>
+
+                        <div className="space-y-2">
+                           <label
+                              htmlFor="seniority_id"
+                              className="text-sm font-medium text-slate-900"
+                           >
+                              Seniority Level{" "}
+                              <span className="text-slate-500 font-normal">
+                                 (optional)
+                              </span>
+                           </label>
+                           {seniorities.length === 0 ? (
+                              <div className="text-sm text-slate-500">
+                                 Loading seniorities...
+                              </div>
+                           ) : (
+                              <select
+                                 id="seniority_id"
+                                 value={formData.seniority_id || ""}
+                                 onChange={(e) =>
+                                    handleInputChange(
+                                       "seniority_id",
+                                       e.target.value
+                                    )
+                                 }
+                                 className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                 <option value="">
+                                    Select seniority level
                                  </option>
-                              ))}
-                           </select>
-                        )}
+                                 {seniorities.map((seniority) => (
+                                    <option
+                                       key={seniority.seniority_id}
+                                       value={seniority.seniority_id}
+                                    >
+                                       {seniority.seniority_name}
+                                    </option>
+                                 ))}
+                              </select>
+                           )}
+                        </div>
                      </div>
 
                      <div className="space-y-2">
