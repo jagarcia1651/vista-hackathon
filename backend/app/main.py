@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -6,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sse_starlette.sse import EventSourceResponse
 
 from .agents.orchestrator import run as orchestrator_run
 from .agents.project_management import (
@@ -16,17 +18,14 @@ from .agents.project_management import (
 from .config import agent_config, app_config
 from .models.project import ProjectCreateRequest as PMProjectCreateRequest
 from .models.project import ProjectManagementRequest
+from .events.bus import event_bus, BusinessEvent
 
-app = FastAPI(
-    title="PSA Agent Backend",
-    description="Professional Service Automation with Strands Multi-Agent Architecture",
-    version="0.2.0",
-)
+app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=app_config.ALLOWED_ORIGINS,
+    allow_origins=["*"],  # In production, replace with specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -245,3 +244,44 @@ async def get_psa_defaults():
         "skill_categories": agent_config.DEFAULT_SKILL_CATEGORIES,
         "hourly_rates": agent_config.DEFAULT_HOURLY_RATES,
     }
+
+
+@app.get("/api/v1/agent/events")
+async def subscribe_to_events():
+    """
+    Server-Sent Events (SSE) endpoint for real-time agent events.
+    
+    This endpoint establishes a long-lived connection that streams events from:
+    - AI agent actions (staff reassignments, task updates)
+    - System notifications (PTO conflicts, scheduling issues)
+    - Chat messages
+    
+    The frontend maintains a persistent connection to this endpoint to receive
+    real-time updates in the sidebar event stream.
+    
+    Returns:
+        EventSourceResponse: SSE stream of agent and system events
+    """
+    async def event_generator():
+        queue = asyncio.Queue()
+        
+        async def handle_event(event: BusinessEvent):
+            await queue.put(event)
+        
+        event_bus.subscribe(handle_event)
+        try:
+            while True:
+                event = await queue.get()
+                yield {
+                    "event": event.type.value,
+                    "data": json.dumps({
+                        "type": event.type.value,
+                        "data": event.data,
+                        "agent_id": event.agent_id,
+                        "timestamp": event.timestamp.isoformat()
+                    })
+                }
+        finally:
+            event_bus.unsubscribe(handle_event)
+    
+    return EventSourceResponse(event_generator())
