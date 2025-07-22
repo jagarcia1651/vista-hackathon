@@ -464,7 +464,9 @@ export function EditStafferSkills() {
                )}
             </div>
          ) : (
-            <div className="text-sm text-slate-500">No skills assigned yet</div>
+            <div className="text-sm text-slate-500">
+               No skills assigned yet. Use the search bar above to add skills.
+            </div>
          )}
       </div>
    );

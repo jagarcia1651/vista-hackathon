@@ -13,7 +13,7 @@ import {
    Staffer,
 } from "../../../../../shared/schemas/typescript/staffer";
 import { skillsService } from "../services/skillsService";
-import { CreateStafferData } from "../services/stafferService";
+import { CreateStafferData, stafferService } from "../services/stafferService";
 import {
    StafferSkillWithDetails,
    staffersSkillsService,
@@ -113,7 +113,7 @@ export function EditStaffersProvider({
    onSuccess,
    onClose,
 }: EditStaffersProviderProps) {
-   const { seniorities, createStaffer, updateStaffer } = useStaffers();
+   const { seniorities, updateStaffer, refreshStaffers } = useStaffers();
 
    // Form state
    const [formData, setFormData] = useState<CreateStafferData>({
@@ -387,7 +387,7 @@ export function EditStaffersProvider({
             };
 
             let success = false;
-            const stafferId = staffer?.id;
+            let stafferId = staffer?.id;
 
             if (staffer?.id) {
                // Update existing staffer
@@ -396,11 +396,20 @@ export function EditStaffersProvider({
                   ...cleanedData,
                });
             } else {
-               // Create new staffer
-               success = await createStaffer(cleanedData);
-               // Note: For new staffers, we can't apply skills immediately
-               // since we don't have the staffer ID until after creation
-               // This would require a different approach or API design
+               // Create new staffer - use stafferService directly to get the created staffer data
+               const result = await stafferService.createStaffer(cleanedData);
+
+               if (result.error) {
+                  setError(result.error);
+                  return;
+               }
+
+               if (result.data) {
+                  success = true;
+                  stafferId = result.data.id;
+                  // Refresh the staffers list in the main context
+                  await refreshStaffers();
+               }
             }
 
             if (success && stafferId) {
@@ -433,44 +442,36 @@ export function EditStaffersProvider({
          formData,
          staffer,
          updateStaffer,
-         createStaffer,
          pendingSkillAdditions,
          pendingSkillDeletions,
          pendingSkillUpdates,
          applySkillChanges,
+         refreshStaffers,
          onSuccess,
          onClose,
       ]
    );
 
    // Skills handlers
-   const handleAddSkill = useCallback(
-      (skill: Skill) => {
-         if (!staffer?.id) {
-            setSkillSearchQuery("");
-            setShowSkillDropdown(false);
-            return;
-         }
+   const handleAddSkill = useCallback((skill: Skill) => {
+      // Allow adding skills for both existing and new staffers
+      // Add to pending additions for immediate visual feedback
+      setPendingSkillAdditions((prev) => [...prev, skill.skill_id]);
 
-         // Add to pending additions for immediate visual feedback
-         setPendingSkillAdditions((prev) => [...prev, skill.skill_id]);
+      // Initialize pending skill details with default values
+      setPendingSkillDetails((prev) => [
+         ...prev,
+         {
+            skill_id: skill.skill_id,
+            skill_status: "competent",
+            certification_active_date: "",
+            certification_expiry_date: "",
+         },
+      ]);
 
-         // Initialize pending skill details with default values
-         setPendingSkillDetails((prev) => [
-            ...prev,
-            {
-               skill_id: skill.skill_id,
-               skill_status: "competent",
-               certification_active_date: "",
-               certification_expiry_date: "",
-            },
-         ]);
-
-         setSkillSearchQuery("");
-         setShowSkillDropdown(false);
-      },
-      [staffer?.id]
-   );
+      setSkillSearchQuery("");
+      setShowSkillDropdown(false);
+   }, []);
 
    const handleRemoveSkill = useCallback(
       (stafferSkill: StafferSkillWithDetails) => {
