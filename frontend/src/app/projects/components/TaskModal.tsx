@@ -22,7 +22,31 @@ interface TaskModalProps {
    task?: ProjectTask;
    isOpen: boolean;
    onClose: () => void;
-   onSuccess: () => void;
+   onSuccess: (taskData: ProjectTask) => void;
+}
+
+function formatDateForInput(dateString: string | undefined): string {
+   if (!dateString) return new Date().toISOString().split("T")[0];
+
+   try {
+      // First try to parse as ISO string
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+         return date.toISOString().split("T")[0];
+      }
+
+      // If that fails, try to parse as YYYY-MM-DD
+      const [year, month, day] = dateString.split("-").map(Number);
+      if (year && month && day) {
+         const date = new Date(year, month - 1, day);
+         return date.toISOString().split("T")[0];
+      }
+
+      return new Date().toISOString().split("T")[0];
+   } catch (e) {
+      console.error("Error formatting date:", e);
+      return new Date().toISOString().split("T")[0];
+   }
 }
 
 function getInitialFormData(
@@ -32,8 +56,10 @@ function getInitialFormData(
    if (task) {
       return {
          ...task,
-         project_task_start_date: task.project_task_start_date.split("T")[0],
-         project_task_due_date: task.project_task_due_date.split("T")[0]
+         project_task_start_date: formatDateForInput(
+            task.project_task_start_date
+         ),
+         project_task_due_date: formatDateForInput(task.project_task_due_date)
       };
    }
    return {
@@ -41,10 +67,10 @@ function getInitialFormData(
       project_task_name: "",
       project_task_description: "",
       project_task_status: "not_started",
-      project_task_start_date: new Date().toISOString().split("T")[0],
-      project_task_due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-         .toISOString()
-         .split("T")[0],
+      project_task_start_date: formatDateForInput(new Date().toISOString()),
+      project_task_due_date: formatDateForInput(
+         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      ),
       estimated_hours: 0,
       actual_hours: 0
    };
@@ -179,6 +205,7 @@ export function TaskModal({
             });
 
             if (result.error) throw new Error(result.error);
+            onSuccess(result.data as ProjectTask);
          } else {
             // Create new task
             const result = await taskService.createTask({
@@ -193,9 +220,9 @@ export function TaskModal({
             });
 
             if (result.error) throw new Error(result.error);
+            onSuccess(result.data as ProjectTask);
          }
 
-         onSuccess();
          onClose();
       } catch (err) {
          console.error("Error saving task:", err);

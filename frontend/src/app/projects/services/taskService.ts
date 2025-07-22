@@ -32,6 +32,7 @@ class TaskService {
           project_task_status,
           project_task_start_date,
           project_task_due_date,
+          project_phase_id,
           estimated_hours,
           actual_hours,
           created_at,
@@ -53,6 +54,57 @@ class TaskService {
             data: null,
             error:
                error instanceof Error ? error.message : "Failed to fetch tasks"
+         };
+      }
+   }
+
+   async getPhaseTasksWithAssignments(phaseId: string) {
+      try {
+         const { data, error } = await this.supabase
+            .from("project_tasks")
+            .select(
+               `
+               project_task_id,
+               project_id,
+               project_phase_id,
+               project_task_name,
+               project_task_description,
+               project_task_status,
+               project_task_start_date,
+               project_task_due_date,
+               estimated_hours,
+               actual_hours,
+               created_at,
+               last_updated_at,
+               staffer_assignments:staffer_assignments(
+                  staffer_assignment_id,
+                  staffer:staffers(
+                     id,
+                     first_name,
+                     last_name,
+                     email,
+                     title
+                  )
+               )
+            `
+            )
+            .eq("project_phase_id", phaseId)
+            .order("created_at", { ascending: false });
+
+         if (error) {
+            console.error("Error fetching phase tasks:", error);
+            throw error;
+         }
+
+         return { data: data as ProjectTask[], error: null };
+      } catch (error) {
+         console.error("Error in getPhaseTasksWithAssignments:", error);
+         return {
+            data: null,
+            error:
+               error instanceof Error
+                  ? error.message
+                  : "Failed to fetch phase tasks"
          };
       }
    }

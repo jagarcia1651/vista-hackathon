@@ -10,6 +10,28 @@ interface TasksGridProps {
    onDelete: (task: ProjectTask) => void;
 }
 
+function formatDate(dateString: string): string {
+   try {
+      // First try to parse as ISO string
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+         return date.toLocaleDateString();
+      }
+
+      // If that fails, try to parse as YYYY-MM-DD
+      const [year, month, day] = dateString.split("-").map(Number);
+      if (year && month && day) {
+         const date = new Date(year, month - 1, day);
+         return date.toLocaleDateString();
+      }
+
+      return dateString;
+   } catch (e) {
+      console.error("Error formatting date:", e);
+      return dateString;
+   }
+}
+
 export function TasksGrid({ tasks, onEdit, onDelete }: TasksGridProps) {
    const getStatusColor = (status: string) => {
       switch (status.toLowerCase()) {
@@ -89,14 +111,10 @@ export function TasksGrid({ tasks, onEdit, onDelete }: TasksGridProps) {
                            </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
-                           {new Date(
-                              task.project_task_start_date
-                           ).toLocaleDateString()}
+                           {formatDate(task.project_task_start_date)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
-                           {new Date(
-                              task.project_task_due_date
-                           ).toLocaleDateString()}
+                           {formatDate(task.project_task_due_date)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
                            {task.actual_hours} / {task.estimated_hours}

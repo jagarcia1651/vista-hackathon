@@ -12,6 +12,14 @@ export const phaseService = {
          .order("project_phase_number", { ascending: true });
    },
 
+   async getPhaseById(phaseId: string) {
+      return supabase
+         .from("project_phases")
+         .select("*")
+         .eq("project_phase_id", phaseId)
+         .single();
+   },
+
    async createPhase(
       phase: Omit<
          ProjectPhase,
