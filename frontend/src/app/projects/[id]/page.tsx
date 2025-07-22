@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import type { Project, ProjectTask, ProjectPhase } from "@/types/project";
+import type {
+   Project,
+   ProjectTask,
+   ProjectPhase,
+   ProjectPhaseWithTasks
+} from "@/types/project";
 import { ProjectStatus } from "@/types/base";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ProjectModal } from "../components/ProjectModal";
-import { TaskModal } from "../components/TaskModal";
-import { TasksGrid } from "../components/TasksGrid";
 import { ProjectPhases } from "../components/ProjectPhases";
 import { PhaseModal } from "../components/PhaseModal";
 import { projectService } from "../services/projectService";
 import { taskService } from "../services/taskService";
 import { phaseService } from "../services/phaseService";
-import { Plus } from "lucide-react";
 
 export default function ProjectPage({
    params
@@ -23,13 +25,10 @@ export default function ProjectPage({
 }) {
    const { id } = use(params);
    const [project, setProject] = useState<Project | null>(null);
-   const [tasks, setTasks] = useState<ProjectTask[]>([]);
-   const [phases, setPhases] = useState<ProjectPhase[]>([]);
+   const [phases, setPhases] = useState<ProjectPhaseWithTasks[]>([]);
    const [loading, setLoading] = useState(true);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
    const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
-   const [selectedTask, setSelectedTask] = useState<ProjectTask | undefined>();
    const [selectedPhase, setSelectedPhase] = useState<
       ProjectPhase | undefined
    >();
@@ -37,7 +36,6 @@ export default function ProjectPage({
 
    useEffect(() => {
       fetchProject();
-      fetchTasks();
       fetchPhases();
    }, [id]);
 
@@ -57,52 +55,38 @@ export default function ProjectPage({
       setLoading(false);
    }
 
-   async function fetchTasks() {
-      const { data, error } = await taskService.getProjectTasks(id);
-
-      if (error) {
-         console.error("Error fetching tasks:", error);
-         return;
-      }
-
-      setTasks(data || []);
-   }
-
    async function fetchPhases() {
-      const { data, error } = await phaseService.getProjectPhases(id);
+      const { data: phasesData, error: phasesError } =
+         await phaseService.getProjectPhases(id);
+      const { data: tasksData, error: tasksError } =
+         await taskService.getProjectTasks(id);
 
-      if (error) {
-         console.error("Error fetching phases:", error);
+      if (phasesError) {
+         console.error("Error fetching phases:", phasesError);
          return;
       }
 
-      setPhases(data || []);
+      if (tasksError) {
+         console.error("Error fetching tasks:", tasksError);
+         return;
+      }
+
+      // Map tasks to their respective phases
+      const phasesWithTasks = (phasesData || []).map((phase: ProjectPhase) => ({
+         ...phase,
+         tasks: (tasksData || []).filter(
+            (task: ProjectTask) =>
+               task.project_phase_id === phase.project_phase_id
+         ),
+         assignedStaffers: [], // This will be populated when we implement team assignments
+         progress: 0 // We'll calculate this below
+      }));
+
+      setPhases(phasesWithTasks);
    }
-
-   const handleEditTask = (task: ProjectTask) => {
-      setSelectedTask(task);
-      setIsTaskModalOpen(true);
-   };
-
-   const handleDeleteTask = async (task: ProjectTask) => {
-      if (!confirm("Are you sure you want to delete this task?")) return;
-
-      const { error } = await taskService.deleteTask(task.project_task_id);
-      if (error) {
-         console.error("Error deleting task:", error);
-         return;
-      }
-
-      fetchTasks();
-   };
 
    const handleAddPhase = () => {
       setSelectedPhase(undefined);
-      setIsPhaseModalOpen(true);
-   };
-
-   const handleEditPhase = (phase: ProjectPhase) => {
-      setSelectedPhase(phase);
       setIsPhaseModalOpen(true);
    };
 
@@ -192,7 +176,6 @@ export default function ProjectPage({
                   </CardContent>
                </Card>
 
-               {/* Placeholder for future sections */}
                <Card>
                   <CardHeader>
                      <CardTitle>Project Metrics</CardTitle>
@@ -207,47 +190,16 @@ export default function ProjectPage({
 
             {/* Project Phases */}
             <ProjectPhases
+               projectId={id}
                phases={phases}
                onAddPhase={handleAddPhase}
-               onEditPhase={handleEditPhase}
             />
-
-            {/* Tasks Section */}
-            <div>
-               <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Project Tasks</h2>
-                  <Button onClick={() => setIsTaskModalOpen(true)}>
-                     <Plus className="w-4 h-4 mr-2" />
-                     Add Task
-                  </Button>
-               </div>
-               <TasksGrid
-                  tasks={tasks}
-                  onEdit={handleEditTask}
-                  onDelete={handleDeleteTask}
-               />
-            </div>
 
             <ProjectModal
                project={project}
                isOpen={isEditModalOpen}
                onClose={() => setIsEditModalOpen(false)}
                onSuccess={fetchProject}
-            />
-
-            <TaskModal
-               projectId={id}
-               task={selectedTask}
-               isOpen={isTaskModalOpen}
-               onClose={() => {
-                  setIsTaskModalOpen(false);
-                  setSelectedTask(undefined);
-               }}
-               onSuccess={() => {
-                  setIsTaskModalOpen(false);
-                  setSelectedTask(undefined);
-                  fetchTasks();
-               }}
             />
 
             <PhaseModal
