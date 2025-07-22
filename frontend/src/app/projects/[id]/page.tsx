@@ -60,13 +60,7 @@ export default function ProjectPage({
    }
 
    if (loading) {
-      return (
-         <div className="min-h-screen bg-slate-50">
-            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-               <div className="text-center">Loading project details...</div>
-            </div>
-         </div>
-      );
+      return null;
    }
 
    if (error || !project) {

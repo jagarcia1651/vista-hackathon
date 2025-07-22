@@ -1,9 +1,12 @@
-import { QuoteModal } from '@/components/quotes/QuoteModal'
+'use client'
+
 import { QuotesList } from '@/components/quotes/QuotesList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/client'
+import { CheckCircle, Clock, FileText, ThumbsUp } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 interface Quote {
   quote_id: string
@@ -37,11 +40,70 @@ interface ClientContact {
   client_id: string
 }
 
-export default async function QuotesPage() {
-  const supabase = await createClient()
+export default function QuotesPage() {
+  const [user, setUser] = useState<{ id: string } | null>(null)
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [staffers, setStaffers] = useState<Staffer[]>([])
+  const [clientContacts, setClientContacts] = useState<ClientContact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // Check authentication
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
+        
+        if (!user) {
+          setLoading(false)
+          return
+        }
+
+        // Fetch all data in parallel
+        const [quotesResult, projectsResult, staffersResult, clientContactsResult] = await Promise.all([
+          supabase.from('quotes').select('*').order('created_at', { ascending: false }),
+          supabase.from('projects').select('project_id, project_name, client_id').order('project_name'),
+          supabase.from('staffers').select('id, first_name, last_name, title').order('first_name'),
+          supabase.from('client_contacts').select('client_contact_id, first_name, last_name, email, client_id').order('first_name')
+        ])
+
+        if (quotesResult.error) throw quotesResult.error
+        
+        setQuotes(quotesResult.data || [])
+        setProjects(projectsResult.data || [])
+        setStaffers(staffersResult.data || [])
+        setClientContacts(clientContactsResult.data || [])
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const refreshData = async () => {
+    const { data: quotes } = await supabase
+      .from('quotes')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (quotes) setQuotes(quotes)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-lg text-slate-600">Loading...</div>
+      </div>
+    )
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -60,116 +122,83 @@ export default async function QuotesPage() {
     )
   }
 
-  // Fetch quotes with error handling
-  const { data: quotes, error: quotesError } = await supabase
-    .from('quotes')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const getQuotesByStatus = (status: string) => quotes.filter(q => q.quote_status === status).length
+  const totalQuotes = quotes.length
+  const pendingQuotes = getQuotesByStatus('pending')
+  const approvedQuotes = getQuotesByStatus('approved')
+  const acceptedQuotes = getQuotesByStatus('accepted')
 
-  // Fetch related data for dropdowns
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('project_id, project_name, client_id')
-    .order('project_name')
-
-  const { data: staffers } = await supabase
-    .from('staffers')
-    .select('id, first_name, last_name, title')
-    .order('first_name')
-
-  const { data: clientContacts } = await supabase
-    .from('client_contacts')
-    .select('client_contact_id, first_name, last_name, email, client_id')
-    .order('first_name')
+  const StatCard = ({ title, count, icon: Icon, color }: { title: string; count: number; icon: React.ComponentType<{ className?: string }>; color: string }) => (
+    <Card className="p-6">
+      <div className="flex justify-end mb-4">
+        <div className={`text-2xl font-bold ${color}`}>
+          {count}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-auto">
+        <Icon className={`w-4 h-4 ${color}`} />
+        <span className="text-sm font-medium text-slate-600">{title}</span>
+      </div>
+    </Card>
+  )
 
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-slate-900">Quote Management</h1>
-              <p className="text-lg text-slate-600 mt-2">
-                Create, edit, and manage project quotes
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Link href="/dashboard">
-                <Button variant="outline">Back to Dashboard</Button>
-              </Link>
-              <QuoteModal 
-                mode="create"
-                projects={projects || []}
-                staffers={staffers || []}
-                clientContacts={clientContacts || []}
-              />
-            </div>
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">
+              Quotes
+            </h1>
+            <p className="text-lg text-slate-600 mt-2">Create, edit, and manage project quotes</p>
           </div>
         </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Total Quotes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">
-                {quotes?.length || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Pending</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                {quotes?.filter(q => q.quote_status === 'pending').length || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Approved</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {quotes?.filter(q => q.quote_status === 'approved').length || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Accepted</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {quotes?.filter(q => q.quote_status === 'accepted').length || 0}
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard 
+            title="Total Quotes" 
+            count={totalQuotes} 
+            icon={FileText} 
+            color="text-slate-900" 
+          />
+          <StatCard 
+            title="Pending" 
+            count={pendingQuotes} 
+            icon={Clock} 
+            color="text-yellow-600" 
+          />
+          <StatCard 
+            title="Approved" 
+            count={approvedQuotes} 
+            icon={ThumbsUp} 
+            color="text-green-600" 
+          />
+          <StatCard 
+            title="Accepted" 
+            count={acceptedQuotes} 
+            icon={CheckCircle} 
+            color="text-blue-600" 
+          />
         </div>
 
         {/* Quotes List */}
-        {quotesError ? (
+        {error ? (
           <Card>
             <CardContent className="p-6">
               <div className="text-red-600 text-center">
                 <p className="font-medium">Error loading quotes</p>
-                <p className="text-sm mt-1">{quotesError.message}</p>
+                <p className="text-sm mt-1">{error}</p>
               </div>
             </CardContent>
           </Card>
         ) : (
           <QuotesList 
-            quotes={quotes || []}
-            projects={projects || []}
-            staffers={staffers || []}
-            clientContacts={clientContacts || []}
+            quotes={quotes}
+            projects={projects}
+            staffers={staffers}
+            clientContacts={clientContacts}
+            onRefresh={refreshData}
           />
         )}
       </div>

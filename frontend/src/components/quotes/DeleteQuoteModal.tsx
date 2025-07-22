@@ -1,5 +1,6 @@
 'use client'
 
+import { Modal } from '@/components/shared/Modal'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/utils/supabase/client'
@@ -20,9 +21,10 @@ interface Quote {
 interface DeleteQuoteModalProps {
   quote: Quote
   onClose: () => void
+  onSuccess?: () => Promise<void>
 }
 
-export function DeleteQuoteModal({ quote, onClose }: DeleteQuoteModalProps) {
+export function DeleteQuoteModal({ quote, onClose, onSuccess }: DeleteQuoteModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -40,6 +42,7 @@ export function DeleteQuoteModal({ quote, onClose }: DeleteQuoteModalProps) {
 
       if (error) throw error
 
+      if (onSuccess) await onSuccess()
       onClose()
       router.refresh()
     } catch (err: unknown) {
@@ -49,9 +52,9 @@ export function DeleteQuoteModal({ quote, onClose }: DeleteQuoteModalProps) {
     }
   }
 
-        return (
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md">
+  return (
+    <Modal isOpen={true} onClose={onClose}>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-red-700">Delete Quote</CardTitle>
         </CardHeader>
@@ -95,6 +98,6 @@ export function DeleteQuoteModal({ quote, onClose }: DeleteQuoteModalProps) {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Modal>
   )
 } 

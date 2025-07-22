@@ -1,21 +1,27 @@
-'use client'
+"use client";
 
+import {
+   Card,
+   CardContent,
+   CardDescription,
+   CardHeader,
+   CardTitle
+} from "@/components/ui/card";
 import { AgentCards } from './AgentCards'
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 
 // Load PSAChatbot dynamically to avoid SSR hydration issues
-const PSAChatbot = dynamic(() => import('./PSAChatbot').then(mod => ({ default: mod.PSAChatbot })), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-16 bg-slate-100 rounded-lg flex items-center justify-center">
-      <div className="text-slate-500">Loading PSA Agent...</div>
-    </div>
-  )
-})
+const PSAChatbot = dynamic(
+   () => import("./PSAChatbot").then(mod => ({ default: mod.PSAChatbot })),
+   {
+      ssr: false,
+      loading: () => null
+   }
+);
 
 interface DashboardClientProps {
-  userEmail?: string
-  userId?: string
+   userEmail?: string;
+   userId?: string;
 }
 
 export function DashboardClient({ userEmail, userId }: DashboardClientProps) {
@@ -34,3 +40,4 @@ export function DashboardClient({ userEmail, userId }: DashboardClientProps) {
     </div>
   )
 } 
+

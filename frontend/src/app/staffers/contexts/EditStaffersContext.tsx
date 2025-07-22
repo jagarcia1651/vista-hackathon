@@ -11,8 +11,10 @@ import {
 import {
    Skill,
    Staffer,
+   StafferRate,
 } from "../../../../../shared/schemas/typescript/staffer";
 import { skillsService } from "../services/skillsService";
+import { stafferRateService } from "../services/stafferRateService";
 import { CreateStafferData, stafferService } from "../services/stafferService";
 import {
    StafferSkillWithDetails,
@@ -34,6 +36,11 @@ interface PendingSkillDetails {
    certification_expiry_date?: string;
 }
 
+interface PendingRateData {
+   cost_rate: number;
+   bill_rate: number;
+}
+
 interface EditStaffersContextType {
    // Form state
    formData: CreateStafferData;
@@ -49,6 +56,11 @@ interface EditStaffersContextType {
    showSkillDropdown: boolean;
    skillsLoading: boolean;
    expandedSkills: Set<string>;
+
+   // Rate state
+   currentRate: StafferRate | null;
+   pendingRateData: PendingRateData | null;
+   rateLoading: boolean;
 
    // Pending changes
    pendingSkillAdditions: string[];
@@ -82,6 +94,9 @@ interface EditStaffersContextType {
    setShowSkillDropdown: (show: boolean) => void;
    toggleSkillExpansion: (skillId: string) => void;
 
+   // Rate handlers
+   handleRateChange: (field: "cost_rate" | "bill_rate", value: number) => void;
+
    // Utility functions
    getPendingUpdateValue: (
       stafferSkillId: string,
@@ -90,6 +105,7 @@ interface EditStaffersContextType {
    ) => string;
    getPendingSkillValue: (skillId: string, field: string) => string;
    getVisibleStafferSkills: () => StafferSkillWithDetails[];
+   getCurrentRateValue: (field: "cost_rate" | "bill_rate") => number;
 
    // Control functions
    resetForm: () => void;
@@ -139,6 +155,12 @@ export function EditStaffersProvider({
    const [showSkillDropdown, setShowSkillDropdown] = useState(false);
    const [skillsLoading, setSkillsLoading] = useState(false);
    const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
+
+   // Rate state
+   const [currentRate, setCurrentRate] = useState<StafferRate | null>(null);
+   const [pendingRateData, setPendingRateData] =
+      useState<PendingRateData | null>(null);
+   const [rateLoading, setRateLoading] = useState(false);
 
    // Pending changes
    const [pendingSkillAdditions, setPendingSkillAdditions] = useState<string[]>(
@@ -200,6 +222,20 @@ export function EditStaffersProvider({
                   setSkillsLoading(false);
                };
                loadStafferSkills();
+
+               // Load staffer rate
+               const loadStafferRate = async () => {
+                  setRateLoading(true);
+                  const { data, error } =
+                     await stafferRateService.getStafferRate(currentStaffer.id);
+                  if (data && !error) {
+                     setCurrentRate(data);
+                  } else {
+                     setCurrentRate(null);
+                  }
+                  setRateLoading(false);
+               };
+               loadStafferRate();
             }
          } else {
             // Reset form for new staffer
@@ -213,6 +249,7 @@ export function EditStaffersProvider({
                capacity: 40,
             });
             setStafferSkills([]);
+            setCurrentRate(null);
          }
 
          // Reset all pending changes
@@ -220,6 +257,7 @@ export function EditStaffersProvider({
          setPendingSkillDeletions([]);
          setPendingSkillUpdates([]);
          setPendingSkillDetails([]);
+         setPendingRateData(null);
          setExpandedSkills(new Set());
          setError("");
          setSkillSearchQuery("");
@@ -311,8 +349,20 @@ export function EditStaffersProvider({
          return false;
       }
 
+      // Rate validation (if pending rate data exists)
+      if (pendingRateData) {
+         if (pendingRateData.cost_rate < 0) {
+            setError("Cost rate must be 0 or greater");
+            return false;
+         }
+         if (pendingRateData.bill_rate < 0) {
+            setError("Bill rate must be 0 or greater");
+            return false;
+         }
+      }
+
       return true;
-   }, [formData]);
+   }, [formData, pendingRateData]);
 
    const applySkillChanges = useCallback(
       async (stafferId: string) => {
@@ -367,6 +417,34 @@ export function EditStaffersProvider({
       ]
    );
 
+   const applyRateChanges = useCallback(
+      async (stafferId: string) => {
+         if (!pendingRateData) return;
+
+         try {
+            if (currentRate) {
+               // Update existing rate
+               await stafferRateService.updateStafferRate({
+                  staffer_rate_id: currentRate.staffer_rate_id,
+                  cost_rate: pendingRateData.cost_rate,
+                  bill_rate: pendingRateData.bill_rate,
+               });
+            } else {
+               // Create new rate
+               await stafferRateService.createStafferRate({
+                  staffer_id: stafferId,
+                  cost_rate: pendingRateData.cost_rate,
+                  bill_rate: pendingRateData.bill_rate,
+               });
+            }
+         } catch (err) {
+            console.error("Error applying rate changes:", err);
+            throw new Error("Failed to update rates");
+         }
+      },
+      [currentRate, pendingRateData]
+   );
+
    const handleSubmit = useCallback(
       async (e: React.FormEvent) => {
          e.preventDefault();
@@ -414,13 +492,18 @@ export function EditStaffersProvider({
 
             if (success && stafferId) {
                // Apply skill changes if there are any
-               const hasChanges =
+               const hasSkillChanges =
                   pendingSkillAdditions.length > 0 ||
                   pendingSkillDeletions.length > 0 ||
                   pendingSkillUpdates.length > 0;
 
-               if (hasChanges) {
+               if (hasSkillChanges) {
                   await applySkillChanges(stafferId);
+               }
+
+               // Apply rate changes if there are any
+               if (pendingRateData) {
+                  await applyRateChanges(stafferId);
                }
 
                onSuccess();
@@ -445,7 +528,9 @@ export function EditStaffersProvider({
          pendingSkillAdditions,
          pendingSkillDeletions,
          pendingSkillUpdates,
+         pendingRateData,
          applySkillChanges,
+         applyRateChanges,
          refreshStaffers,
          onSuccess,
          onClose,
@@ -555,6 +640,24 @@ export function EditStaffersProvider({
       });
    }, []);
 
+   // Rate handlers
+   const handleRateChange = useCallback(
+      (field: "cost_rate" | "bill_rate", value: number) => {
+         setPendingRateData((prev) => {
+            const currentCostRate =
+               prev?.cost_rate ?? currentRate?.cost_rate ?? 0;
+            const currentBillRate =
+               prev?.bill_rate ?? currentRate?.bill_rate ?? 0;
+
+            return {
+               cost_rate: field === "cost_rate" ? value : currentCostRate,
+               bill_rate: field === "bill_rate" ? value : currentBillRate,
+            };
+         });
+      },
+      [currentRate]
+   );
+
    // Utility functions
    const getPendingUpdateValue = useCallback(
       (
@@ -594,11 +697,19 @@ export function EditStaffersProvider({
          );
       }, [stafferSkills, pendingSkillDeletions]);
 
+   const getCurrentRateValue = useCallback(
+      (field: "cost_rate" | "bill_rate"): number => {
+         return pendingRateData?.[field] ?? currentRate?.[field] ?? 0;
+      },
+      [pendingRateData, currentRate]
+   );
+
    const resetForm = useCallback(() => {
       setPendingSkillAdditions([]);
       setPendingSkillDeletions([]);
       setPendingSkillUpdates([]);
       setPendingSkillDetails([]);
+      setPendingRateData(null);
       setExpandedSkills(new Set());
       setError("");
       setSkillSearchQuery("");
@@ -621,6 +732,11 @@ export function EditStaffersProvider({
       skillsLoading,
       expandedSkills,
 
+      // Rate state
+      currentRate,
+      pendingRateData,
+      rateLoading,
+
       // Pending changes
       pendingSkillAdditions,
       pendingSkillDeletions,
@@ -642,10 +758,14 @@ export function EditStaffersProvider({
       setShowSkillDropdown,
       toggleSkillExpansion,
 
+      // Rate handlers
+      handleRateChange,
+
       // Utility functions
       getPendingUpdateValue,
       getPendingSkillValue,
       getVisibleStafferSkills,
+      getCurrentRateValue,
 
       // Control functions
       resetForm,
