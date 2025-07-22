@@ -218,6 +218,8 @@ SUPABASE_SERVICE_KEY=your_supabase_service_key
    cd backend
    cp .env.example .env  # Configure with your Bedrock API key
    poetry install
+   # Install strands-agents-tools separately if needed for advanced tooling
+   # poetry run pip install strands-agents-tools
    poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
