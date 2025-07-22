@@ -17,6 +17,13 @@ import {
 import { useEffect, useState } from "react";
 import { Staffer } from "../../../../shared/schemas/typescript/staffer";
 
+interface PendingSkillUpdate {
+   staffer_skill_id: string;
+   skill_status?: string;
+   certification_active_date?: string;
+   certification_expiry_date?: string;
+}
+
 interface StafferModalProps {
    isOpen: boolean;
    onClose: () => void;
@@ -42,6 +49,9 @@ export function StafferModal({
    const [pendingSkillDeletions, setPendingSkillDeletions] = useState<string[]>(
       []
    );
+   const [pendingSkillUpdates, setPendingSkillUpdates] = useState<
+      PendingSkillUpdate[]
+   >([]);
 
    const [formData, setFormData] = useState<CreateStafferData>({
       first_name: "",
@@ -83,6 +93,7 @@ export function StafferModal({
          // Reset pending skill changes when modal opens
          setPendingSkillAdditions([]);
          setPendingSkillDeletions([]);
+         setPendingSkillUpdates([]);
       }
    }, [staffer, isOpen]);
 
@@ -98,10 +109,12 @@ export function StafferModal({
 
    const handleSkillsChange = (
       pendingAdditions: string[],
-      pendingDeletions: string[]
+      pendingDeletions: string[],
+      pendingUpdates: PendingSkillUpdate[]
    ) => {
       setPendingSkillAdditions(pendingAdditions);
       setPendingSkillDeletions(pendingDeletions);
+      setPendingSkillUpdates(pendingUpdates);
    };
 
    const validateForm = (): boolean => {
@@ -145,6 +158,12 @@ export function StafferModal({
          promises.push(
             staffersSkillsService.deleteStafferSkill(stafferSkillId)
          );
+      }
+
+      // Apply skill updates
+      for (const update of pendingSkillUpdates) {
+         const updateData = { ...update };
+         promises.push(staffersSkillsService.updateStafferSkill(updateData));
       }
 
       // Apply skill additions
@@ -205,10 +224,12 @@ export function StafferModal({
 
          if (success && stafferId) {
             // Apply skill changes if there are any
-            if (
+            const hasChanges =
                pendingSkillAdditions.length > 0 ||
-               pendingSkillDeletions.length > 0
-            ) {
+               pendingSkillDeletions.length > 0 ||
+               pendingSkillUpdates.length > 0;
+
+            if (hasChanges) {
                await applySkillChanges(stafferId);
             }
 
@@ -229,6 +250,7 @@ export function StafferModal({
       // Reset pending changes when cancelling
       setPendingSkillAdditions([]);
       setPendingSkillDeletions([]);
+      setPendingSkillUpdates([]);
       onClose();
    };
 

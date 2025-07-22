@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
    Skill,
@@ -15,8 +15,16 @@ interface EditStafferSkillsProps {
    staffer: Staffer | null;
    onSkillsChange?: (
       pendingAdditions: string[],
-      pendingDeletions: string[]
+      pendingDeletions: string[],
+      pendingUpdates: PendingSkillUpdate[]
    ) => void;
+}
+
+interface PendingSkillUpdate {
+   staffer_skill_id: string;
+   skill_status?: string;
+   certification_active_date?: string;
+   certification_expiry_date?: string;
 }
 
 export function EditStafferSkills({
@@ -33,11 +41,15 @@ export function EditStafferSkills({
    const [filteredSkills, setFilteredSkills] = useState<Skill[]>([]);
    const [showSkillDropdown, setShowSkillDropdown] = useState(false);
    const [skillsLoading, setSkillsLoading] = useState(false);
+   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
    const skillSearchRef = useRef<HTMLDivElement>(null);
 
    // Track pending changes (only applied on form submission)
    const [pendingAdditions, setPendingAdditions] = useState<string[]>([]);
    const [pendingDeletions, setPendingDeletions] = useState<string[]>([]);
+   const [pendingUpdates, setPendingUpdates] = useState<PendingSkillUpdate[]>(
+      []
+   );
 
    // Load all skills on mount and create lookup map
    useEffect(() => {
@@ -60,6 +72,8 @@ export function EditStafferSkills({
    useEffect(() => {
       setPendingAdditions([]);
       setPendingDeletions([]);
+      setPendingUpdates([]);
+      setExpandedSkills(new Set());
 
       if (staffer?.id) {
          const loadStafferSkills = async () => {
@@ -79,8 +93,8 @@ export function EditStafferSkills({
 
    // Notify parent of pending changes
    useEffect(() => {
-      onSkillsChange?.(pendingAdditions, pendingDeletions);
-   }, [pendingAdditions, pendingDeletions, onSkillsChange]);
+      onSkillsChange?.(pendingAdditions, pendingDeletions, pendingUpdates);
+   }, [pendingAdditions, pendingDeletions, pendingUpdates, onSkillsChange]);
 
    // Filter skills based on search query and exclude already assigned/pending skills
    useEffect(() => {
@@ -154,6 +168,12 @@ export function EditStafferSkills({
 
       // Add to pending deletions for immediate visual feedback
       setPendingDeletions((prev) => [...prev, stafferSkill.staffer_skill_id]);
+      // Remove from expanded if it was expanded
+      setExpandedSkills((prev) => {
+         const newSet = new Set(prev);
+         newSet.delete(stafferSkill.staffer_skill_id);
+         return newSet;
+      });
    };
 
    const handleRemovePendingSkill = (skillId: string) => {
@@ -169,6 +189,57 @@ export function EditStafferSkills({
       const value = e.target.value;
       setSkillSearchQuery(value);
       setShowSkillDropdown(true);
+   };
+
+   const toggleSkillExpansion = (skillId: string) => {
+      setExpandedSkills((prev) => {
+         const newSet = new Set(prev);
+         if (newSet.has(skillId)) {
+            newSet.delete(skillId);
+         } else {
+            newSet.add(skillId);
+         }
+         return newSet;
+      });
+   };
+
+   const handleSkillUpdate = (
+      stafferSkillId: string,
+      field: string,
+      value: string
+   ) => {
+      setPendingUpdates((prev) => {
+         const existing = prev.find(
+            (update) => update.staffer_skill_id === stafferSkillId
+         );
+         if (existing) {
+            return prev.map((update) =>
+               update.staffer_skill_id === stafferSkillId
+                  ? { ...update, [field]: value }
+                  : update
+            );
+         } else {
+            return [
+               ...prev,
+               { staffer_skill_id: stafferSkillId, [field]: value },
+            ];
+         }
+      });
+   };
+
+   const getPendingUpdateValue = (
+      stafferSkillId: string,
+      field: string,
+      originalValue: string | undefined
+   ): string => {
+      const pendingUpdate = pendingUpdates.find(
+         (update) => update.staffer_skill_id === stafferSkillId
+      );
+      return (
+         (pendingUpdate?.[field as keyof PendingSkillUpdate] as string) ||
+         originalValue ||
+         ""
+      );
    };
 
    // Get visible skills (exclude pending deletions, include pending additions)
@@ -246,73 +317,226 @@ export function EditStafferSkills({
             </div>
          )}
 
-         {/* Current Skills as Chips */}
+         {/* Current Skills as Accordion Tiles */}
          {skillsLoading ? (
             <div className="text-sm text-slate-500">Loading skills...</div>
          ) : visibleStafferSkills.length > 0 || pendingAdditions.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
                <label className="text-sm font-medium text-slate-900">
                   Current Skills
                </label>
-               <div className="flex flex-wrap gap-2">
-                  {/* Existing skills (not marked for deletion) */}
-                  {visibleStafferSkills.map((stafferSkill) => {
-                     const skill = skillsLookup[stafferSkill.skill_id];
-                     return (
-                        <div
-                           key={stafferSkill.staffer_skill_id}
-                           className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-900 rounded-full text-sm"
-                        >
-                           <span>{skill?.skill_name || "Unknown Skill"}</span>
-                           <span className="text-xs text-blue-700 capitalize">
-                              ({stafferSkill.skill_status.toLowerCase()})
-                           </span>
-                           {skill?.is_certification && (
-                              <span className="text-xs">🏆</span>
-                           )}
+
+               {/* Existing skills (not marked for deletion) */}
+               {visibleStafferSkills.map((stafferSkill) => {
+                  const skill = skillsLookup[stafferSkill.skill_id];
+                  const isExpanded = expandedSkills.has(
+                     stafferSkill.staffer_skill_id
+                  );
+
+                  return (
+                     <div
+                        key={stafferSkill.staffer_skill_id}
+                        className="border border-slate-200 rounded-lg bg-white shadow-sm"
+                     >
+                        {/* Accordion Header */}
+                        <div className="flex items-center justify-between p-4">
+                           <div className="flex items-center gap-3 flex-1">
+                              <button
+                                 type="button"
+                                 onClick={() =>
+                                    toggleSkillExpansion(
+                                       stafferSkill.staffer_skill_id
+                                    )
+                                 }
+                                 className="text-slate-400 hover:text-slate-600"
+                              >
+                                 {isExpanded ? (
+                                    <ChevronDown className="w-5 h-5" />
+                                 ) : (
+                                    <ChevronRight className="w-5 h-5" />
+                                 )}
+                              </button>
+
+                              <div className="flex-1">
+                                 <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900">
+                                       {skill?.skill_name || "Unknown Skill"}
+                                    </span>
+                                    {skill?.is_certification && (
+                                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                          Certification 🏆
+                                       </span>
+                                    )}
+                                 </div>
+                                 <div className="text-sm text-slate-600 capitalize">
+                                    {getPendingUpdateValue(
+                                       stafferSkill.staffer_skill_id,
+                                       "skill_status",
+                                       stafferSkill.skill_status
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+
                            <button
                               type="button"
                               onClick={() => handleRemoveSkill(stafferSkill)}
-                              className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
+                              className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50"
                            >
-                              <X className="w-3 h-3" />
+                              <X className="w-4 h-4" />
                            </button>
                         </div>
-                     );
-                  })}
 
-                  {/* Pending additions */}
-                  {pendingAdditions.map((skillId) => {
-                     const skill = skillsLookup[skillId];
-                     return (
-                        <div
-                           key={`pending-${skillId}`}
-                           className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-900 rounded-full text-sm border-2 border-dashed border-green-300"
-                        >
-                           <span>{skill?.skill_name || "Unknown Skill"}</span>
-                           <span className="text-xs text-green-700 capitalize">
-                              (competent)
-                           </span>
-                           {skill?.is_certification && (
-                              <span className="text-xs">🏆</span>
-                           )}
-                           <span className="text-xs text-green-600 ml-1">
-                              pending
-                           </span>
+                        {/* Accordion Content */}
+                        {isExpanded && (
+                           <div className="px-4 pb-4 border-t border-slate-100">
+                              <div className="space-y-4 pt-4">
+                                 {/* Skill Description */}
+                                 <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                       Description
+                                    </label>
+                                    <p className="text-sm text-slate-600 mt-1">
+                                       {skill?.skill_description ||
+                                          "No description available"}
+                                    </p>
+                                 </div>
+
+                                 {/* Skill Status */}
+                                 <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                       Skill Level
+                                    </label>
+                                    <select
+                                       value={getPendingUpdateValue(
+                                          stafferSkill.staffer_skill_id,
+                                          "skill_status",
+                                          stafferSkill.skill_status
+                                       )}
+                                       onChange={(e) =>
+                                          handleSkillUpdate(
+                                             stafferSkill.staffer_skill_id,
+                                             "skill_status",
+                                             e.target.value
+                                          )
+                                       }
+                                       className="mt-1 block w-full p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                       <option value="learning">
+                                          Learning
+                                       </option>
+                                       <option value="competent">
+                                          Competent
+                                       </option>
+                                       <option value="expert">Expert</option>
+                                       <option value="certified">
+                                          Certified
+                                       </option>
+                                    </select>
+                                 </div>
+
+                                 {/* Certification Dates (only if it's a certification) */}
+                                 {skill?.is_certification && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                             Certification Active Date
+                                          </label>
+                                          <Input
+                                             type="date"
+                                             value={getPendingUpdateValue(
+                                                stafferSkill.staffer_skill_id,
+                                                "certification_active_date",
+                                                stafferSkill.certification_active_date
+                                             )}
+                                             onChange={(e) =>
+                                                handleSkillUpdate(
+                                                   stafferSkill.staffer_skill_id,
+                                                   "certification_active_date",
+                                                   e.target.value
+                                                )
+                                             }
+                                             className="mt-1"
+                                          />
+                                       </div>
+
+                                       <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                             Certification Expiry Date
+                                          </label>
+                                          <Input
+                                             type="date"
+                                             value={getPendingUpdateValue(
+                                                stafferSkill.staffer_skill_id,
+                                                "certification_expiry_date",
+                                                stafferSkill.certification_expiry_date
+                                             )}
+                                             onChange={(e) =>
+                                                handleSkillUpdate(
+                                                   stafferSkill.staffer_skill_id,
+                                                   "certification_expiry_date",
+                                                   e.target.value
+                                                )
+                                             }
+                                             className="mt-1"
+                                          />
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                        )}
+                     </div>
+                  );
+               })}
+
+               {/* Pending additions */}
+               {pendingAdditions.map((skillId) => {
+                  const skill = skillsLookup[skillId];
+                  return (
+                     <div
+                        key={`pending-${skillId}`}
+                        className="border-2 border-dashed border-green-300 rounded-lg bg-green-50"
+                     >
+                        <div className="flex items-center justify-between p-4">
+                           <div className="flex items-center gap-3 flex-1">
+                              <ChevronRight className="w-5 h-5 text-slate-400" />
+
+                              <div className="flex-1">
+                                 <div className="flex items-center gap-2">
+                                    <span className="font-medium text-green-900">
+                                       {skill?.skill_name || "Unknown Skill"}
+                                    </span>
+                                    {skill?.is_certification && (
+                                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                          Certification 🏆
+                                       </span>
+                                    )}
+                                    <span className="text-xs text-green-600 bg-green-200 px-2 py-1 rounded-full">
+                                       pending
+                                    </span>
+                                 </div>
+                                 <div className="text-sm text-green-700">
+                                    competent
+                                 </div>
+                              </div>
+                           </div>
+
                            <button
                               type="button"
                               onClick={() => handleRemovePendingSkill(skillId)}
-                              className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                              className="text-green-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50"
                            >
-                              <X className="w-3 h-3" />
+                              <X className="w-4 h-4" />
                            </button>
                         </div>
-                     );
-                  })}
-               </div>
+                     </div>
+                  );
+               })}
 
                {(pendingAdditions.length > 0 ||
-                  pendingDeletions.length > 0) && (
+                  pendingDeletions.length > 0 ||
+                  pendingUpdates.length > 0) && (
                   <div className="text-xs text-slate-500 italic">
                      Changes will be applied when you save the staffer
                   </div>
