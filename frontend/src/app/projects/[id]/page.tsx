@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { createClient } from "@/utils/supabase/client";
 import type { Project } from "@/types/project";
 import { ProjectStatus } from "@/types/base";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ProjectModal } from "../components/ProjectModal";
+import { projectService } from "../services/projectService";
 
 export default function ProjectPage({
    params
@@ -19,7 +19,6 @@ export default function ProjectPage({
    const [loading, setLoading] = useState(true);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
    const [error, setError] = useState<string | null>(null);
-   const supabase = createClient();
 
    useEffect(() => {
       fetchProject();
@@ -29,34 +28,16 @@ export default function ProjectPage({
       setLoading(true);
       setError(null);
 
-      try {
-         const { data, error } = await supabase
-            .from("projects")
-            .select(
-               `
-               project_id,
-               client_id,
-               project_name,
-               project_status,
-               project_start_date,
-               project_due_date,
-               created_at,
-               last_updated_at
-            `
-            )
-            .eq("project_id", id)
-            .single();
+      const { data, error } = await projectService.getProjectById(id);
 
-         if (error) throw error;
-         if (data) {
-            setProject(data as Project);
-         }
-      } catch (err) {
-         console.error("Error fetching project:", err);
+      if (error) {
+         console.error("Error fetching project:", error);
          setError("Failed to load project details. Please try again later.");
-      } finally {
-         setLoading(false);
+      } else if (data) {
+         setProject(data);
       }
+
+      setLoading(false);
    }
 
    if (loading) {
