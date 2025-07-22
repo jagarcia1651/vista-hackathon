@@ -1,6 +1,7 @@
 "use client";
 
 import { EditStafferDetails } from "@/app/staffers/components/EditStafferDetails";
+import { EditStafferRates } from "@/app/staffers/components/EditStafferRates";
 import { EditStafferSkills } from "@/app/staffers/components/EditStafferSkills";
 import {
    EditStaffersProvider,
@@ -61,6 +62,9 @@ function StafferModalContent({
 
                   {/* Basic Information Section */}
                   <EditStafferDetails />
+
+                  {/* Rates Section */}
+                  <EditStafferRates />
 
                   {/* Skills Section */}
                   <EditStafferSkills />
