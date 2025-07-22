@@ -12,7 +12,7 @@ COPY package*.json ./
 COPY . .
 
 # Install dependencies (this will install @supabase/ssr and other new packages)
-RUN npm ci
+RUN npm i
 
 # Create necessary directories with proper permissions
 RUN mkdir -p .next node_modules/.cache && \

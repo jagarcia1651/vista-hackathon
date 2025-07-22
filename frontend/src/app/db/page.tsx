@@ -36,21 +36,28 @@ export default async function DatabasePage() {
   // Query all core tables
   const tables: TableData[] = []
   
-  // Core PSA tables to display
+  // Core PSA tables to display - Updated to match actual Supabase tables
   const coreQueries = [
-    { table: 'clients', display: 'Clients' },
+    { table: 'addresses', display: 'Addresses' },
+    { table: 'agents', display: 'Agents' },
+    { table: 'client_artifacts', display: 'Client Artifacts' },
     { table: 'client_contacts', display: 'Client Contacts' },
-    { table: 'projects', display: 'Projects' },
+    { table: 'clients', display: 'Clients' },
+    { table: 'firm_holidays', display: 'Firm Holidays' },
+    { table: 'firms', display: 'Firms' },
     { table: 'project_phases', display: 'Project Phases' },
     { table: 'project_tasks', display: 'Project Tasks' },
-    { table: 'staffers', display: 'Staffers' },
-    { table: 'skills', display: 'Skills' },
-    { table: 'seniorities', display: 'Seniorities' },
-    { table: 'staffer_skills', display: 'Staffer Skills' },
-    { table: 'staffer_rates', display: 'Staffer Rates' },
+    { table: 'project_team_memberships', display: 'Project Team Memberships' },
+    { table: 'project_teams', display: 'Project Teams' },
+    { table: 'projects', display: 'Projects' },
     { table: 'quotes', display: 'Quotes' },
-    { table: 'agents', display: 'Agents' },
-    { table: 'addresses', display: 'Addresses' }
+    { table: 'seniorities', display: 'Seniorities' },
+    { table: 'skills', display: 'Skills' },
+    { table: 'staffer_assignments', display: 'Staffer Assignments' },
+    { table: 'staffer_rates', display: 'Staffer Rates' },
+    { table: 'staffer_skills', display: 'Staffer Skills' },
+    { table: 'staffer_time_off', display: 'Staffer Time Off' },
+    { table: 'staffers', display: 'Staffers' }
   ]
 
   // Execute queries for each table
@@ -61,6 +68,13 @@ export default async function DatabasePage() {
         .select('*')
         .limit(10) // Limit to first 10 rows
       
+      // Debug logging (will show in server console)
+      console.log(`Table ${query.table}:`, { 
+        dataLength: data?.length, 
+        error: error?.message,
+        firstRecord: data?.[0] 
+      })
+      
       tables.push({
         tableName: query.table,
         displayName: query.display,
@@ -68,6 +82,7 @@ export default async function DatabasePage() {
         error: error?.message
       })
     } catch (err) {
+      console.log(`Table ${query.table} catch error:`, err)
       tables.push({
         tableName: query.table,
         displayName: query.display,
@@ -177,29 +192,35 @@ function TableCard({ table }: { table: TableData }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Show first few records */}
+            {/* Debug info */}
+            <div className="bg-blue-50 p-2 rounded text-xs">
+              <strong>Debug:</strong> Found {table.data.length} records, showing first {Math.min(3, table.data.length)}
+            </div>
+            
+            {/* Show first few records with enhanced visibility */}
             {table.data.slice(0, 3).map((record, index) => (
-              <div key={index} className="bg-slate-50 p-3 rounded text-xs">
-                <div className="grid grid-cols-1 gap-1">
-                  {Object.entries(record).slice(0, 4).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="font-medium text-slate-600">{key}:</span>
-                      <span className="text-slate-800 truncate ml-2 max-w-32">
-                        {value?.toString() || 'null'}
+              <div key={index} className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm">
+                <div className="text-xs font-medium text-slate-500 mb-2">Record #{index + 1}</div>
+                <div className="space-y-2">
+                  {Object.entries(record).slice(0, 6).map(([key, value]) => (
+                    <div key={key} className="flex flex-col sm:flex-row">
+                      <span className="font-medium text-slate-700 min-w-32 text-sm">{key}:</span>
+                      <span className="text-slate-900 text-sm font-mono bg-slate-50 px-2 py-1 rounded ml-0 sm:ml-2 break-all">
+                        {value === null ? '(null)' : value === undefined ? '(undefined)' : String(value)}
                       </span>
                     </div>
                   ))}
-                  {Object.keys(record).length > 4 && (
-                    <div className="text-slate-500 text-center mt-1">
-                      ... {Object.keys(record).length - 4} more fields
+                  {Object.keys(record).length > 6 && (
+                    <div className="text-slate-500 text-center text-sm italic pt-2 border-t">
+                      ... {Object.keys(record).length - 6} more fields
                     </div>
                   )}
                 </div>
               </div>
             ))}
             {table.data.length > 3 && (
-              <div className="text-center text-slate-500 text-sm">
-                ... {table.data.length - 3} more records
+              <div className="text-center text-slate-600 text-sm bg-slate-100 p-2 rounded">
+                + {table.data.length - 3} more records (showing top 3)
               </div>
             )}
           </div>
