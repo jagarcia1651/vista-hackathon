@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import type { Project } from "@/types/project";
+import type { Project, ProjectTask } from "@/types/project";
 import { ProjectStatus } from "@/types/base";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ProjectModal } from "../components/ProjectModal";
+import { TaskModal } from "../components/TaskModal";
+import { TasksGrid } from "../components/TasksGrid";
 import { projectService } from "../services/projectService";
+import { taskService } from "../services/taskService";
+import { Plus } from "lucide-react";
 
 export default function ProjectPage({
    params
@@ -16,12 +20,16 @@ export default function ProjectPage({
 }) {
    const { id } = use(params);
    const [project, setProject] = useState<Project | null>(null);
+   const [tasks, setTasks] = useState<ProjectTask[]>([]);
    const [loading, setLoading] = useState(true);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+   const [selectedTask, setSelectedTask] = useState<ProjectTask | undefined>();
    const [error, setError] = useState<string | null>(null);
 
    useEffect(() => {
       fetchProject();
+      fetchTasks();
    }, [id]);
 
    async function fetchProject() {
@@ -39,6 +47,34 @@ export default function ProjectPage({
 
       setLoading(false);
    }
+
+   async function fetchTasks() {
+      const { data, error } = await taskService.getProjectTasks(id);
+
+      if (error) {
+         console.error("Error fetching tasks:", error);
+         return;
+      }
+
+      setTasks(data || []);
+   }
+
+   const handleEditTask = (task: ProjectTask) => {
+      setSelectedTask(task);
+      setIsTaskModalOpen(true);
+   };
+
+   const handleDeleteTask = async (task: ProjectTask) => {
+      if (!confirm("Are you sure you want to delete this task?")) return;
+
+      const { error } = await taskService.deleteTask(task.project_task_id);
+      if (error) {
+         console.error("Error deleting task:", error);
+         return;
+      }
+
+      fetchTasks();
+   };
 
    if (loading) {
       return null;
@@ -153,34 +189,42 @@ export default function ProjectPage({
                </Card>
             </div>
 
-            {/* Placeholder for Tasks, Team, and other sections */}
-            <Card>
-               <CardHeader>
-                  <CardTitle>Project Tasks</CardTitle>
-               </CardHeader>
-               <CardContent>
-                  <p className="text-muted-foreground">
-                     Project tasks will be displayed here
-                  </p>
-               </CardContent>
-            </Card>
-
-            <Card>
-               <CardHeader>
-                  <CardTitle>Team Members</CardTitle>
-               </CardHeader>
-               <CardContent>
-                  <p className="text-muted-foreground">
-                     Team member assignments will be displayed here
-                  </p>
-               </CardContent>
-            </Card>
+            {/* Tasks Section */}
+            <div>
+               <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Project Tasks</h2>
+                  <Button onClick={() => setIsTaskModalOpen(true)}>
+                     <Plus className="w-4 h-4 mr-2" />
+                     Add Task
+                  </Button>
+               </div>
+               <TasksGrid
+                  tasks={tasks}
+                  onEdit={handleEditTask}
+                  onDelete={handleDeleteTask}
+               />
+            </div>
 
             <ProjectModal
                project={project}
                isOpen={isEditModalOpen}
                onClose={() => setIsEditModalOpen(false)}
                onSuccess={fetchProject}
+            />
+
+            <TaskModal
+               projectId={id}
+               task={selectedTask}
+               isOpen={isTaskModalOpen}
+               onClose={() => {
+                  setIsTaskModalOpen(false);
+                  setSelectedTask(undefined);
+               }}
+               onSuccess={() => {
+                  setIsTaskModalOpen(false);
+                  setSelectedTask(undefined);
+                  fetchTasks();
+               }}
             />
          </div>
       </div>
