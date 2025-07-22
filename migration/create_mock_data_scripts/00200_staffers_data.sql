@@ -1,0 +1,15 @@
+INSERT INTO "public"."staffers"
+   ("id", "title", "seniority_id", "capacity", "time_zone", "created_at", "last_updated_at", "first_name", "last_name", "email", "user_id")
+VALUES
+   ('279d4f30-5df6-477d-9ba3-7bfcd9bbcbbc', 'Data Governance Consultant', '6f3af061-aa99-4ea6-af47-b23853271cd1', '40', 'America/Los_Angeles', '2024-12-31 16:17:24.859536+00', '2023-06-12 16:17:24.859687+00', 'Jake', 'Moser', 'jmoser@bigtime.net', null),
+   ('3883e2cd-6d22-4581-b219-11a11ccecea7', 'QA Analyst', '8d621766-1414-4d20-bf94-a763eb7b3a30', '40', 'America/Denver', '2024-04-05 16:17:24.858974+00', '2023-07-19 16:17:24.858981+00', 'Will', 'Thomas', 'wthomas@bigtime.net', null),
+   ('43cfb33a-310d-4861-b676-0a6ce6db20b0', 'Change Management Lead', '8d621766-1414-4d20-bf94-a763eb7b3a30', '40', 'America/New_York', '2024-09-30 16:17:24.859947+00', '2023-02-20 16:17:24.859978+00', 'Brent', 'Carlton', 'bcarlton@momentum.com', null),
+   ('72ea2388-034f-4656-84c3-be68b7896f88', 'Business Analyst', 'a4d7615c-83ec-40c2-85c3-781e0ee8517f', '40', 'America/Chicago', '2024-12-06 16:17:24.858869+00', '2025-06-02 16:17:24.858883+00', 'Oqueive', 'Horne', 'oqueivehorne@gmail.com', null),
+   ('7323b16e-d1b5-4745-a4de-53349b6cd194', 'Technical Writer', '8d621766-1414-4d20-bf94-a763eb7b3a30', '35', 'America/Chicago', '2025-07-11 16:17:24.859279+00', '2023-04-03 16:17:24.859303+00', 'Ashby', 'deButts', 'adebutts@bigtime.net', null),
+   ('82e304ba-7370-4813-bcd5-80cb2b31c62d', 'UX Designer', '6f3af061-aa99-4ea6-af47-b23853271cd1', '40', 'America/Los_Angeles', '2025-01-23 16:17:24.858928+00', '2023-05-17 16:17:24.858935+00', 'Joe', 'Wu', 'joe.wu@bigtime.net', null),
+   ('ab59f335-c91a-4339-bc18-fd88344d6888', 'Solutions Architect', '6769fcc2-af88-4ae7-8e39-e1515d08b8ca', '20', 'America/New_York', '2023-08-23 16:17:24.859036+00', '2024-12-22 16:17:24.859051+00', 'Jacob', 'Garcia', 'jgarcia@bigtime.net', null),
+   ('b5804140-029d-4ddb-b8b2-758d8eae9bee', 'Jr. Developer', '6769fcc2-af88-4ae7-8e39-e1515d08b8ca', '40', 'America/New_York', '2025-07-22 18:31:36.859024+00', '2025-07-22 18:31:36.859024+00', 'William', 'Fiorella', 'wfi@test.com', null),
+   ('c67e24a4-e063-4e74-8b55-699913c16209', 'Project Manager', '6769fcc2-af88-4ae7-8e39-e1515d08b8ca', '40', 'America/New_York', '2023-09-12 16:17:24.85872+00', '2023-10-10 16:17:24.858751+00', 'Sofia', 'Garcia Marques', 'sgm@test.com', null),
+   ('c7e2c57c-b776-48b8-9c0b-bd2f64ef7a53', 'Vendor Analyst', 'a4d7615c-83ec-40c2-85c3-781e0ee8517f', '30', 'America/Chicago', '2024-12-05 16:17:24.860085+00', '2024-10-02 16:17:24.860103+00', 'JoAnne', 'DeMarcus', 'jd@email.com', null),
+   ('d3e1e081-2230-47b6-bdce-61bdb13d4fe1', 'Engineer', '6769fcc2-af88-4ae7-8e39-e1515d08b8ca', '40', 'America/New_York', '2025-07-22 16:26:26.425981+00', '2025-07-22 16:26:26.425981+00', 'Joe', 'Tyrell', 'jt@bigtime.net', null),
+   ('ebede6be-8df9-4880-9942-03a4239263c4', 'Executive Comms Specialist', '8d621766-1414-4d20-bf94-a763eb7b3a30', '40', 'America/New_York', '2023-08-21 16:17:24.860199+00', '2024-03-27 16:17:24.860216+00', 'Nate', 'Hernandez', 'nhernandez@bigtime.net', null);

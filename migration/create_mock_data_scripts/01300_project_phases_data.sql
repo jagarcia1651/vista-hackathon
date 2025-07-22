@@ -1,0 +1,6 @@
+INSERT INTO "public"."project_phases"
+   ("project_phase_id", "project_id", "project_phase_number", "project_phase_name", "project_phase_description", "project_phase_status", "project_phase_start_date", "project_phase_due_date", "created_at", "last_updated_at")
+VALUES
+   ('28df29d1-365c-4465-8939-0a277d873821', 'eb1c5492-4471-4319-b4a4-fcb3de1b03cd', '3', 'Implementation Support & Oversight', 'Vendor selection, implementation QA, and executive reporting.', 'Planned', '8/16/2025', '12/18/2025', '2024-12-17 16:17:24.853767+00', '2025-01-26 16:17:24.853777+00'),
+   ('60bf8651-ce54-43e0-9bc1-074b570545dd', 'eb1c5492-4471-4319-b4a4-fcb3de1b03cd', '1', 'Discovery & Assessment', 'Stakeholder interviews, current-state analysis, and SWOT review.', 'Completed', '6/6/2025', '7/1/2025', '2024-04-24 16:17:24.853713+00', '2025-03-28 16:17:24.853723+00'),
+   ('e19e0343-8d8d-4d23-a87f-ff91954a17aa', 'eb1c5492-4471-4319-b4a4-fcb3de1b03cd', '2', 'Design & Roadmapping', 'Target architecture, roadmap development, and system requirements gathering.', 'In Progress - On Track', '7/2/2025', '8/15/2025', '2023-07-04 16:17:24.853741+00', '2023-11-06 16:17:24.85375+00');

@@ -1,0 +1,16 @@
+INSERT INTO "public"."skills"
+   ("skill_id", "skill_name", "skill_description", "is_certification", "created_at", "last_updated_at")
+VALUES
+   ('173f5097-a750-4b23-881d-7b307cb115b7', 'Executive Communication', 'Skilled in delivering concise, persuasive content for executive-level stakeholders.', 'false', '2023-12-24 16:17:24.858236+00', '2024-01-04 16:17:24.858261+00'),
+   ('241f90a9-47db-4915-8100-32d09c5dbb95', 'Change Management', 'Ability to lead organizational change and adoption strategies.', 'false', '2023-05-02 16:17:24.858002+00', '2023-01-22 16:17:24.85801+00'),
+   ('35cd01fe-3237-4a9b-82d5-e1da0a1b4e33', 'Certified UX Designer', 'Holds a recognized certification in user experience design and prototyping.', 'true', '2023-12-25 16:17:24.858356+00', '2024-08-04 16:17:24.858372+00'),
+   ('3ed72068-8e66-46e3-b672-b2b4bf900a01', 'Certified Project Manager', 'Holds an active PMP or equivalent certification for professional project management.', 'true', '2023-12-24 16:17:24.858236+00', '2024-01-04 16:17:24.858261+00'),
+   ('5d154a76-5543-4df7-b907-4bf3b506e180', 'Roadmapping', 'Skill in creating phased implementation plans with milestones and dependencies.', 'false', '2023-05-03 16:17:24.857843+00', '2025-07-14 16:17:24.857853+00'),
+   ('6c6395cd-fc02-4458-977b-887f7c869b1d', 'Data Governance', 'Understanding of data stewardship, ownership, and quality management practices.', 'false', '2023-12-25 16:17:24.858356+00', '2024-08-04 16:17:24.858372+00'),
+   ('79733874-15ad-4655-9210-f69dbc14f870', 'Systems Documentation', 'Experience documenting current-state systems, data flows, and integrations.', 'false', '2024-05-08 16:17:24.857343+00', '2023-11-10 16:17:24.857392+00'),
+   ('a4e4c6d3-427f-41bb-a90d-f0e1bd4b8d1f', 'SWOT Analysis', 'Competence in identifying strengths, weaknesses, opportunities, and threats in organizational contexts.', 'false', '2024-08-20 16:17:24.85683+00', '2023-09-18 16:17:24.856973+00'),
+   ('b1854242-12ac-458d-a980-d6a37ed29e5d', 'Vendor Evaluation', 'Ability to compare, score, and assess vendor proposals using structured criteria.', 'false', '2023-07-30 16:17:24.857929+00', '2024-03-01 16:17:24.857942+00'),
+   ('c3dbeb10-dc83-43e0-a7ad-55d88ef7d835', 'Business Requirements Gathering', 'Ability to capture functional and technical requirements from diverse stakeholders.', 'false', '2024-12-19 16:17:24.857764+00', '2023-11-19 16:17:24.857774+00'),
+   ('da788f1f-bde3-465b-938a-58ec1fb327a4', 'QA Planning', 'Knowledge of creating test plans and defining quality metrics for implementations.', 'false', '2023-05-02 16:17:24.858002+00', '2023-01-22 16:17:24.85801+00'),
+   ('ea2ab14a-5d67-44ea-ad73-1e7f39ded246', 'Figma', 'Proficiency with Figma for creating wireframes and interactive prototypes.', 'false', '2024-03-31 16:17:24.857644+00', '2023-12-08 16:17:24.857671+00'),
+   ('ecbc2c90-e7ae-45a1-990e-0a795af8bbe7', 'Structured Interviews', 'Ability to conduct formal, methodical interviews with stakeholders to gather insights.', 'false', '2023-04-06 16:17:24.856745+00', '2023-02-19 16:17:24.856752+00');
