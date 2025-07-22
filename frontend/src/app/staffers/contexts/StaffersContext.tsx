@@ -77,13 +77,20 @@ export function StaffersProvider({ children }: StaffersProviderProps) {
          return staffers;
       }
 
-      const query = searchQuery.toLowerCase();
-      return staffers.filter(
-         (staffer) =>
-            staffer.first_name?.toLowerCase().includes(query) ||
-            staffer.last_name?.toLowerCase().includes(query) ||
-            staffer.email?.toLowerCase().includes(query)
-      );
+      const query = searchQuery.toLowerCase().trim();
+      return staffers.filter((staffer) => {
+         const firstName = staffer.first_name?.toLowerCase() || "";
+         const lastName = staffer.last_name?.toLowerCase() || "";
+         const email = staffer.email?.toLowerCase() || "";
+         const fullName = `${firstName} ${lastName}`.trim();
+
+         return (
+            firstName.includes(query) ||
+            lastName.includes(query) ||
+            email.includes(query) ||
+            fullName.includes(query)
+         );
+      });
    }, [staffers, searchQuery]);
 
    // Load staffers function - memoized to prevent unnecessary re-creates
