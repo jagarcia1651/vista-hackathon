@@ -19,20 +19,6 @@ interface TeamWithMembers extends ProjectTeam {
    })[];
 }
 
-interface StafferResponse {
-   id: string;
-   first_name: string;
-   last_name: string;
-   email: string;
-   title: string;
-   capacity: number;
-   time_zone?: string | null;
-   seniority?: {
-      seniority_name: string;
-      seniority_level: number;
-   } | null;
-}
-
 export function TeamAssignmentSection({
    projectId,
    phaseId
