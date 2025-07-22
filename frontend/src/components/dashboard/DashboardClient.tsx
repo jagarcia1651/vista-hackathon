@@ -28,7 +28,7 @@ export function DashboardClient({ userEmail, userId }: DashboardClientProps) {
             <CardHeader>
               <CardTitle>Welcome</CardTitle>
               <CardDescription>
-                You're successfully signed in!
+                You&apos;re successfully signed in!
               </CardDescription>
             </CardHeader>
             <CardContent>

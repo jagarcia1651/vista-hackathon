@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function Home() {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
 
   // Show loading state while checking authentication
   if (loading) {
@@ -77,7 +77,7 @@ export default function Home() {
               <CardContent>
                 <p className="text-sm text-slate-600">
                   Intelligent resource matching based on skills, availability, and project requirements 
-                  to optimize your team's capacity.
+                  to optimize your team&apos;s capacity.
                 </p>
               </CardContent>
             </Card>

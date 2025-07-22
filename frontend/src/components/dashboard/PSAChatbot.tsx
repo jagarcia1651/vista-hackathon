@@ -43,7 +43,7 @@ export function PSAChatbot() {
       setMessages([
         {
           id: '1',
-          content: 'Hello! I\'m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
+          content: 'Hello! I&apos;m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
           role: 'assistant',
           timestamp: new Date()
         }
@@ -71,7 +71,7 @@ export function PSAChatbot() {
       } else {
         setBackendStatus('disconnected')
       }
-    } catch (error) {
+    } catch {
       setBackendStatus('disconnected')
     }
   }
@@ -161,13 +161,13 @@ export function PSAChatbot() {
     }
   }
 
-  const getErrorMessage = (error: any) => {
-    if (error.message?.includes('404')) {
+  const getErrorMessage = (error: Error | unknown) => {
+    if (error instanceof Error && error.message?.includes('404')) {
       return 'Backend API not found. Please make sure the FastAPI backend is running on port 8000.\n\nTo start the backend:\n1. cd backend\n2. poetry run uvicorn app.main:app --reload'
-    } else if (error.message?.includes('Failed to fetch')) {
+    } else if (error instanceof Error && error.message?.includes('Failed to fetch')) {
       return 'Cannot connect to the backend. Please check:\n\n1. Backend server is running (poetry run uvicorn app.main:app --reload)\n2. Backend is accessible at http://localhost:8000\n3. CORS is properly configured'
     } else {
-      return 'Sorry, I\'m having trouble connecting to the PSA agents. Please check if the backend is running and try again.'
+      return 'Sorry, I&apos;m having trouble connecting to the PSA agents. Please check if the backend is running and try again.'
     }
   }
 
@@ -182,7 +182,7 @@ export function PSAChatbot() {
     setMessages([
       {
         id: '1',
-        content: 'Hello! I\'m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
+        content: 'Hello! I&apos;m your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?',
         role: 'assistant',
         timestamp: new Date()
       }

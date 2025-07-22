@@ -6,7 +6,7 @@ import Link from 'next/link'
 interface TableData {
   tableName: string
   displayName: string
-  data: any[]
+  data: Record<string, unknown>[]
   error?: string
 }
 

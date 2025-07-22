@@ -38,7 +38,7 @@ export function SignUpForm() {
       } else {
         setSuccess(true)
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -53,7 +53,7 @@ export function SignUpForm() {
             <CardHeader className="text-center">
               <CardTitle>Check your email</CardTitle>
               <CardDescription>
-                We've sent you a confirmation link to complete your registration
+                We&apos;ve sent you a confirmation link to complete your registration
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
