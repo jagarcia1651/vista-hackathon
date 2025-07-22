@@ -34,13 +34,20 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
    useEffect(() => {
       if (!user) return;
 
-      const eventSource = new EventSource("/api/v1/agent/events");
+      const eventSource = new EventSource(
+         "http://localhost:8000/api/v1/agent/events"
+      );
+
       eventSource.onmessage = event => {
          const businessEvent = JSON.parse(event.data);
          setEvents(prev => [...prev, businessEvent]);
          if (!isOpen) {
             setUnreadCount(prev => prev + 1);
          }
+      };
+
+      eventSource.onerror = error => {
+         console.error("EventSource error:", error);
       };
 
       return () => eventSource.close();
