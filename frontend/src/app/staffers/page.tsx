@@ -3,10 +3,9 @@
 import { StafferModal } from "@/components/staffers/StafferModal";
 import {
    ErrorDisplay,
-   LoadingState,
    StaffersHeader,
    StaffersSearch,
-   StaffersTable,
+   StaffersTable
 } from "./components";
 import { StaffersProvider, useStaffers } from "./contexts/StaffersContext";
 
@@ -23,7 +22,7 @@ function StaffersPageContent() {
       selectedStaffer,
       openModal,
       closeModal,
-      deleteStaffer,
+      deleteStaffer
    } = useStaffers();
 
    // Simple success handler - the context will handle data updates automatically
@@ -32,7 +31,7 @@ function StaffersPageContent() {
    };
 
    if (loading) {
-      return <LoadingState />;
+      return null;
    }
 
    return (

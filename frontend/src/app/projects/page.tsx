@@ -99,11 +99,7 @@ export default function ProjectsPage() {
    });
 
    if (loading) {
-      return (
-         <div className="container mx-auto p-6">
-            <div className="text-center">Loading projects...</div>
-         </div>
-      );
+      return null;
    }
 
    return (
