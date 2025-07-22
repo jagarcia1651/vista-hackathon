@@ -1,18 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-
-export interface Staffer {
-   id: string;
-   first_name: string;
-   last_name: string;
-   email: string;
-   time_zone?: string;
-   title: string;
-   seniority_id?: string;
-   capacity: number; // Float representing weekly hourly capacity
-   created_at?: string;
-   last_updated_at?: string;
-   user_id?: string;
-}
+import { Staffer } from "../../../../../shared/schemas/typescript/staffer";
 
 export interface CreateStafferData {
    first_name: string;
