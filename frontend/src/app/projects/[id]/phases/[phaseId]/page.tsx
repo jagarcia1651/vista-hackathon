@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +13,18 @@ import { teamService } from "@/app/projects/services/teamService";
 import { TasksGrid } from "@/app/projects/components/TasksGrid";
 import { TaskModal } from "@/app/projects/components/TaskModal";
 
+type PageParams = {
+   id: string;
+   phaseId: string;
+};
+
 export default function PhaseDetailPage({
    params
 }: {
-   params: { id: string; phaseId: string };
+   params: Promise<PageParams>;
 }) {
    const router = useRouter();
+   const unwrappedParams = use<PageParams>(params);
    const [phase, setPhase] = useState<ProjectPhaseWithTasks | null>(null);
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
@@ -29,18 +35,20 @@ export default function PhaseDetailPage({
       try {
          // Fetch phase details directly by ID
          const { data: phaseData, error: phaseError } =
-            await phaseService.getPhaseById(params.phaseId);
+            await phaseService.getPhaseById(unwrappedParams.phaseId);
          if (phaseError) throw new Error(String(phaseError));
          if (!phaseData) throw new Error("Phase not found");
 
          // Fetch tasks for this phase with assignments
          const { data: tasksData, error: tasksError } =
-            await taskService.getPhaseTasksWithAssignments(params.phaseId);
+            await taskService.getPhaseTasksWithAssignments(
+               unwrappedParams.phaseId
+            );
          if (tasksError) throw new Error(String(tasksError));
 
          // Fetch team members for this phase
          const { data: teamData, error: teamError } =
-            await teamService.getTeamByPhase(params.phaseId);
+            await teamService.getTeamByPhase(unwrappedParams.phaseId);
          if (teamError) throw new Error(String(teamError));
          const teamMembers =
             teamData?.project_team_memberships
@@ -65,7 +73,7 @@ export default function PhaseDetailPage({
 
    useEffect(() => {
       fetchPhaseDetails();
-   }, [params.id, params.phaseId]);
+   }, [unwrappedParams.id, unwrappedParams.phaseId]);
 
    const calculateProgress = (tasks: any[]) => {
       if (!tasks || tasks.length === 0) return 0;
@@ -80,7 +88,7 @@ export default function PhaseDetailPage({
    };
 
    const handleNavigateToProject = () => {
-      router.push(`/projects/${phase?.project_id || params.id}`);
+      router.push(`/projects/${phase?.project_id || unwrappedParams.id}`);
    };
 
    const handleAddTask = () => {
@@ -114,8 +122,8 @@ export default function PhaseDetailPage({
          } else {
             await taskService.createTask({
                ...taskData,
-               project_id: params.id,
-               project_phase_id: params.phaseId
+               project_id: unwrappedParams.id,
+               project_phase_id: unwrappedParams.phaseId
             });
          }
          setIsTaskModalOpen(false);
@@ -337,7 +345,7 @@ export default function PhaseDetailPage({
             onClose={() => setIsTaskModalOpen(false)}
             onSuccess={handleTaskSave}
             task={selectedTask}
-            projectId={params.id}
+            projectId={unwrappedParams.id}
          />
       </div>
    );
