@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { QuickActions } from './QuickActions'
+import { MessageCircle, Send, X } from 'lucide-react'
 
 interface Message {
   id: string
@@ -26,6 +26,7 @@ export function PSAChatbot() {
   const [isInitialized, setIsInitialized] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -189,10 +190,6 @@ export function PSAChatbot() {
     ])
   }
 
-  const handleQuickAction = (prompt: string) => {
-    setInput(prompt)
-  }
-
   const getStatusColor = () => {
     switch (backendStatus) {
       case 'connected': return 'text-green-600'
@@ -209,93 +206,138 @@ export function PSAChatbot() {
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Quick Actions */}
-      <QuickActions onActionClick={handleQuickAction} />
-      
-      {/* Chat Interface */}
-      <Card className="h-[600px] flex flex-col">
-        <CardHeader className="border-b flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">PSA Agent Assistant</CardTitle>
+  if (!isExpanded) {
+    // Collapsed state - wide bar at bottom
+    return (
+      <Card className="w-full bg-white shadow-lg border-2">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
+              <MessageCircle className="text-blue-600" size={20} />
+              <span className="font-medium text-slate-900">Chat with AI Agents</span>
               <div className={`text-xs ${getStatusColor()}`}>
                 ● {getStatusText()}
               </div>
-              <Button variant="outline" size="sm" onClick={clearChat}>
-                Clear Chat
-              </Button>
             </div>
-          </div>
-          <p className="text-sm text-slate-600">
-            Ask about project planning, resource allocation, quotes, or capacity analysis
-          </p>
-          {backendStatus === 'disconnected' && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
-              <p className="text-sm text-red-800">
-                ⚠️ Backend disconnected. Start with: <code className="bg-red-100 px-1 rounded">poetry run uvicorn app.main:app --reload</code>
-              </p>
-            </div>
-          )}
-        </CardHeader>
-        
-        <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : message.status === 'error'
-                      ? 'bg-red-50 text-red-900 border border-red-200'
-                      : message.status === 'sending'
-                      ? 'bg-slate-100 text-slate-600 animate-pulse'
-                      : 'bg-slate-100 text-slate-900'
-                  }`}
-                >
-                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                  <div className={`text-xs mt-1 ${
-                    message.role === 'user' ? 'text-blue-100' : 'text-slate-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t p-4 flex-shrink-0">
-            <div className="flex space-x-2">
+            <div className="flex-1 flex items-center space-x-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask about project planning, resource allocation, quotes..."
-                className="flex-1 min-h-[40px] max-h-[100px] resize-none"
+                className="flex-1 min-h-[40px] max-h-[40px] resize-none"
                 disabled={isLoading}
+                onFocus={() => setIsExpanded(true)}
               />
               <Button 
                 onClick={sendMessage} 
                 disabled={!input.trim() || isLoading}
-                className="self-end"
+                size="sm"
               >
-                {isLoading ? 'Sending...' : 'Send'}
+                <Send size={16} />
               </Button>
             </div>
-            <div className="mt-2 text-xs text-slate-500">
-              Press Enter to send, Shift+Enter for new line
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsExpanded(true)}
+            >
+              Expand Chat
+            </Button>
           </div>
         </CardContent>
       </Card>
-    </div>
+    )
+  }
+
+  // Expanded state - full chat interface
+  return (
+    <Card className="w-full h-[500px] flex flex-col bg-white shadow-lg border-2">
+      <CardHeader className="border-b flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <MessageCircle className="text-blue-600" size={20} />
+            <CardTitle className="text-lg font-semibold">PSA Agent Assistant</CardTitle>
+            <div className={`text-xs ${getStatusColor()}`}>
+              ● {getStatusText()}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={clearChat}>
+              Clear Chat
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsExpanded(false)}>
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+        <p className="text-sm text-slate-600">
+          Ask about project planning, resource allocation, quotes, or capacity analysis
+        </p>
+        {backendStatus === 'disconnected' && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+            <p className="text-sm text-red-800">
+              ⚠️ Backend disconnected. Start with: <code className="bg-red-100 px-1 rounded">poetry run uvicorn app.main:app --reload</code>
+            </p>
+          </div>
+        )}
+      </CardHeader>
+      
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  message.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : message.status === 'error'
+                    ? 'bg-red-50 text-red-900 border border-red-200'
+                    : message.status === 'sending'
+                    ? 'bg-slate-100 text-slate-600 animate-pulse'
+                    : 'bg-slate-100 text-slate-900'
+                }`}
+              >
+                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                <div className={`text-xs mt-1 ${
+                  message.role === 'user' ? 'text-blue-100' : 'text-slate-500'
+                }`}>
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t p-4 flex-shrink-0">
+          <div className="flex space-x-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about project planning, resource allocation, quotes..."
+              className="flex-1 min-h-[40px] max-h-[100px] resize-none"
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={sendMessage} 
+              disabled={!input.trim() || isLoading}
+              className="self-end"
+            >
+              {isLoading ? 'Sending...' : 'Send'}
+            </Button>
+          </div>
+          <div className="mt-2 text-xs text-slate-500">
+            Press Enter to send, Shift+Enter for new line
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 } 
