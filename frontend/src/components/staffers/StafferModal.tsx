@@ -1,8 +1,8 @@
 "use client";
 
+import { seniorityService } from "@/app/staffers/services/seniorityService";
 import {
    CreateStafferData,
-   Staffer,
    stafferService,
 } from "@/app/staffers/services/stafferService";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
+import {
+   Seniority,
+   Staffer,
+} from "../../../../shared/schemas/typescript/staffer";
 
 interface StafferModalProps {
    isOpen: boolean;
@@ -39,6 +43,23 @@ export function StafferModal({
    });
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState("");
+   const [seniorities, setSeniorities] = useState<Seniority[]>([]);
+   const [seniorityLoading, setSeniorityLoading] = useState(false);
+
+   // Fetch seniorities when modal opens
+   useEffect(() => {
+      if (isOpen && seniorities.length === 0) {
+         const fetchSeniorities = async () => {
+            setSeniorityLoading(true);
+            const result = await seniorityService.getAllSeniorities();
+            if (result.data) {
+               setSeniorities(result.data);
+            }
+            setSeniorityLoading(false);
+         };
+         fetchSeniorities();
+      }
+   }, [isOpen, seniorities.length]);
 
    // Reset form when modal opens/closes or staffer changes
    useEffect(() => {
@@ -46,9 +67,9 @@ export function StafferModal({
          if (staffer) {
             // Edit mode - populate form with existing data
             setFormData({
-               first_name: staffer.first_name,
-               last_name: staffer.last_name,
-               email: staffer.email,
+               first_name: staffer.first_name || "",
+               last_name: staffer.last_name || "",
+               email: staffer.email || "",
                time_zone: staffer.time_zone || "",
                title: staffer.title,
                capacity: staffer.capacity,
@@ -282,6 +303,46 @@ export function StafferModal({
                            placeholder="Senior Consultant"
                            required
                         />
+                     </div>
+
+                     <div className="space-y-2">
+                        <label
+                           htmlFor="seniority_id"
+                           className="text-sm font-medium text-slate-900"
+                        >
+                           Seniority{" "}
+                           <span className="text-slate-500 text-xs">
+                              (optional)
+                           </span>
+                        </label>
+                        {seniorityLoading ? (
+                           <div className="text-sm text-slate-500">
+                              Loading seniorities...
+                           </div>
+                        ) : (
+                           <select
+                              id="seniority_id"
+                              value={formData.seniority_id || ""}
+                              onChange={(e) =>
+                                 handleInputChange(
+                                    "seniority_id",
+                                    e.target.value
+                                 )
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           >
+                              <option value="">Select a seniority level</option>
+                              {seniorities.map((seniority) => (
+                                 <option
+                                    key={seniority.seniority_id}
+                                    value={seniority.seniority_id}
+                                 >
+                                    {seniority.seniority_name} (Level{" "}
+                                    {seniority.seniority_level})
+                                 </option>
+                              ))}
+                           </select>
+                        )}
                      </div>
 
                      <div className="space-y-2">
