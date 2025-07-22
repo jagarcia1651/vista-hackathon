@@ -1,39 +1,136 @@
+"use client";
+
 import { Card } from "@/components/ui/card";
-import ProjectOverview from "@/components/projects/ProjectOverview";
-import TeamInsights from "@/components/projects/TeamInsights";
-import ProjectTasks from "@/components/projects/ProjectTasks";
+import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState } from "react";
+import type { Project } from "@/types/project";
+import { ProjectStatus } from "@/types/base";
+import { ProjectsSearch } from "./components/ProjectsSearch";
+import { ProjectsGrid } from "./components/ProjectsGrid";
+import { ProjectModal } from "./components/ProjectModal";
+import { ProjectsHeader } from "./components/ProjectsHeader";
+import { ProjectFilters } from "./components/ProjectFilters";
 
-export default async function ProjectsPage() {
-   return (
-      <div className="container mx-auto p-6 space-y-6">
-         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <svg
-                  className="w-8 h-8 text-blue-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-               >
-                  <path
-                     strokeLinecap="round"
-                     strokeLinejoin="round"
-                     strokeWidth={2}
-                     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  />
-               </svg>
-               <h1 className="text-2xl font-semibold">
-                  Project Manager Dashboard
-               </h1>
-            </div>
+export default function ProjectsPage() {
+   const [projects, setProjects] = useState<Project[]>([]);
+   const [searchQuery, setSearchQuery] = useState("");
+   const [selectedStatus, setSelectedStatus] = useState<ProjectStatus | null>(
+      null
+   );
+   const [isModalOpen, setIsModalOpen] = useState(false);
+   const [selectedProject, setSelectedProject] = useState<
+      Project | undefined
+   >();
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState<string | null>(null);
+
+   const supabase = createClient();
+
+   useEffect(() => {
+      fetchProjects();
+   }, []);
+
+   async function fetchProjects() {
+      setLoading(true);
+      setError(null);
+
+      try {
+         const { data, error } = await supabase.from("projects").select(`
+            project_id,
+            client_id,
+            project_name,
+            project_status,
+            project_start_date,
+            project_due_date,
+            created_at,
+            last_updated_at
+         `);
+
+         if (error) throw error;
+
+         setProjects(data as Project[]);
+      } catch (err) {
+         console.error("Error fetching projects:", err);
+         setError("Failed to load projects. Please try again later.");
+      } finally {
+         setLoading(false);
+      }
+   }
+
+   const openModal = (project?: Project) => {
+      setSelectedProject(project);
+      setIsModalOpen(true);
+   };
+
+   const closeModal = () => {
+      setSelectedProject(undefined);
+      setIsModalOpen(false);
+   };
+
+   const handleModalSuccess = () => {
+      closeModal();
+      fetchProjects();
+   };
+
+   const projectStats = projects.reduce(
+      (acc, project) => {
+         acc[project.project_status as ProjectStatus]++;
+         return acc;
+      },
+      {
+         [ProjectStatus.ACTIVE]: 0,
+         [ProjectStatus.ON_HOLD]: 0,
+         [ProjectStatus.COMPLETED]: 0,
+         [ProjectStatus.CANCELLED]: 0
+      }
+   );
+
+   const filteredProjects = projects.filter(project => {
+      const matchesSearch = project.project_name
+         .toLowerCase()
+         .includes(searchQuery.toLowerCase());
+      const matchesStatus =
+         !selectedStatus || project.project_status === selectedStatus;
+      return matchesSearch && matchesStatus;
+   });
+
+   if (loading) {
+      return (
+         <div className="container mx-auto p-6">
+            <div className="text-center">Loading projects...</div>
          </div>
-         <p className="text-muted-foreground">
-            Comprehensive project oversight and team coordination
-         </p>
+      );
+   }
 
-         <ProjectOverview />
-         <TeamInsights />
-         <ProjectTasks />
+   return (
+      <div className="min-h-screen bg-slate-50">
+         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <ProjectsHeader onCreateNew={() => openModal()}>
+               <ProjectFilters
+                  stats={projectStats}
+                  selectedStatus={selectedStatus}
+                  onStatusChange={setSelectedStatus}
+               />
+            </ProjectsHeader>
+
+            <ProjectsSearch
+               searchQuery={searchQuery}
+               onSearch={setSearchQuery}
+            />
+
+            {error && (
+               <Card className="p-4 mb-6 bg-red-50 text-red-700">{error}</Card>
+            )}
+
+            <ProjectsGrid projects={filteredProjects} onEdit={openModal} />
+
+            <ProjectModal
+               isOpen={isModalOpen}
+               onClose={closeModal}
+               project={selectedProject}
+               onSuccess={handleModalSuccess}
+            />
+         </div>
       </div>
    );
 }
