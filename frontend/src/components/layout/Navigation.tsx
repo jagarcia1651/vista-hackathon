@@ -33,7 +33,8 @@ export function Navigation() {
       { name: "Dashboard", href: "/dashboard" },
       { name: "Projects", href: "/projects" },
       { name: "Quotes", href: "/quotes" },
-      { name: "Database", href: "/db" }
+      { name: "Staffers", href: "/staffers" },
+      { name: "Database", href: "/db" },
    ];
 
    return (
@@ -50,7 +51,7 @@ export function Navigation() {
 
                   {user && (
                      <div className="hidden md:flex space-x-6">
-                        {navigation.map(item => (
+                        {navigation.map((item) => (
                            <Link
                               key={item.name}
                               href={item.href}
