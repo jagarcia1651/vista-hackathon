@@ -5,7 +5,12 @@ import {
    CardHeader,
    CardTitle,
 } from "@/components/ui/card";
-import { Staffer } from "../services/stafferService";
+import { useEffect, useState } from "react";
+import {
+   Seniority,
+   Staffer,
+} from "../../../../../shared/schemas/typescript/staffer";
+import { seniorityService } from "../services/seniorityService";
 import { StafferRow } from "./StafferRow";
 import { StaffersEmptyState } from "./StaffersEmptyState";
 
@@ -26,6 +31,19 @@ export function StaffersTable({
    onDelete,
    onCreateNew,
 }: StaffersTableProps) {
+   const [seniorities, setSeniorities] = useState<Seniority[]>([]);
+
+   // Fetch seniorities on component mount
+   useEffect(() => {
+      const fetchSeniorities = async () => {
+         const result = await seniorityService.getAllSeniorities();
+         if (result.data) {
+            setSeniorities(result.data);
+         }
+      };
+      fetchSeniorities();
+   }, []);
+
    return (
       <Card>
          <CardHeader>
@@ -55,6 +73,9 @@ export function StaffersTable({
                               Title
                            </th>
                            <th className="text-left py-3 px-4 font-medium text-slate-900">
+                              Seniority
+                           </th>
+                           <th className="text-left py-3 px-4 font-medium text-slate-900">
                               Time Zone
                            </th>
                            <th className="text-left py-3 px-4 font-medium text-slate-900">
@@ -70,6 +91,7 @@ export function StaffersTable({
                            <StafferRow
                               key={staffer.id}
                               staffer={staffer}
+                              seniorities={seniorities}
                               deleteLoading={deleteLoading}
                               onEdit={onEdit}
                               onDelete={onDelete}

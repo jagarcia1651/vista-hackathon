@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Staffer } from "../services/stafferService";
+import {
+   Seniority,
+   Staffer,
+} from "../../../../../shared/schemas/typescript/staffer";
 
 interface StafferRowProps {
    staffer: Staffer;
+   seniorities: Seniority[];
    deleteLoading: string | null;
    onEdit: (staffer: Staffer) => void;
    onDelete: (staffer: Staffer) => void;
@@ -10,6 +14,7 @@ interface StafferRowProps {
 
 export function StafferRow({
    staffer,
+   seniorities,
    deleteLoading,
    onEdit,
    onDelete,
@@ -23,6 +28,14 @@ export function StafferRow({
 
    const formatCapacity = (capacity: number) => {
       return `${capacity}h/week`;
+   };
+
+   const getSeniorityName = (seniorityId?: string) => {
+      if (!seniorityId) return "—";
+      const seniority = seniorities.find((s) => s.seniority_id === seniorityId);
+      return seniority
+         ? `${seniority.seniority_name} (L${seniority.seniority_level})`
+         : "—";
    };
 
    return (
@@ -40,6 +53,11 @@ export function StafferRow({
          </td>
          <td className="py-3 px-4">
             <div className="text-slate-600">{staffer.title}</div>
+         </td>
+         <td className="py-3 px-4">
+            <div className="text-slate-600 text-sm">
+               {getSeniorityName(staffer.seniority_id)}
+            </div>
          </td>
          <td className="py-3 px-4">
             <div className="text-slate-600 text-sm">

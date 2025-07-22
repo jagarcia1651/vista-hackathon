@@ -143,10 +143,11 @@ export function StafferModal({
       try {
          let result;
 
-         // Clean up the form data - remove empty time_zone if not provided
+         // Clean up the form data - remove empty fields if not provided
          const cleanedData = {
             ...formData,
             time_zone: formData.time_zone?.trim() || undefined,
+            seniority_id: formData.seniority_id?.trim() || undefined,
          };
 
          if (staffer) {
@@ -329,13 +330,16 @@ export function StafferModal({
                                     e.target.value
                                  )
                               }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 font-medium"
                            >
-                              <option value="">Select a seniority level</option>
+                              <option value="" className="text-slate-600">
+                                 Select a seniority level
+                              </option>
                               {seniorities.map((seniority) => (
                                  <option
                                     key={seniority.seniority_id}
                                     value={seniority.seniority_id}
+                                    className="text-slate-900 font-medium"
                                  >
                                     {seniority.seniority_name} (Level{" "}
                                     {seniority.seniority_level})
