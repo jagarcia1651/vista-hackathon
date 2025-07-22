@@ -14,6 +14,7 @@ import {
    Card,
    CardContent,
    CardDescription,
+   CardFooter,
    CardHeader,
    CardTitle,
 } from "@/components/ui/card";
@@ -42,6 +43,11 @@ function StafferModalContent({
       resetForm();
       setActiveTab("details"); // Reset to details tab when closing
       onClose();
+   };
+
+   const handleFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      handleSubmit(e);
    };
 
    if (!isOpen) return null;
@@ -111,14 +117,18 @@ function StafferModalContent({
                )}
             </CardHeader>
             <CardContent>
-               {activeTab === "details" || isNewStaffer ? (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                           {error}
-                        </div>
-                     )}
+               {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm mb-6">
+                     {error}
+                  </div>
+               )}
 
+               {activeTab === "details" || isNewStaffer ? (
+                  <form
+                     id="staffer-form"
+                     onSubmit={handleFormSubmit}
+                     className="space-y-6"
+                  >
                      {/* Basic Information Section */}
                      <EditStafferDetails />
 
@@ -127,44 +137,50 @@ function StafferModalContent({
 
                      {/* Skills Section */}
                      <EditStafferSkills />
-
-                     <div className="flex justify-end space-x-4 pt-4">
-                        <Button
-                           type="button"
-                           variant="outline"
-                           onClick={handleClose}
-                           disabled={loading}
-                        >
-                           Cancel
-                        </Button>
-                        <Button type="submit" disabled={loading}>
-                           {loading
-                              ? staffer
-                                 ? "Updating..."
-                                 : "Creating..."
-                              : staffer
-                              ? "Update Staffer"
-                              : "Create Staffer"}
-                        </Button>
-                     </div>
                   </form>
                ) : (
                   <div className="space-y-6">
                      {/* Time Off Section */}
                      <EditStafferTimeOff staffer={staffer || null} />
-
-                     <div className="flex justify-end space-x-4 pt-4">
-                        <Button
-                           type="button"
-                           variant="outline"
-                           onClick={handleClose}
-                        >
-                           Close
-                        </Button>
-                     </div>
                   </div>
                )}
             </CardContent>
+            <CardFooter className="flex justify-end space-x-4 border-t border-slate-200 pt-4">
+               <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={loading}
+               >
+                  Cancel
+               </Button>
+               <Button
+                  type={
+                     activeTab === "details" || isNewStaffer
+                        ? "submit"
+                        : "button"
+                  }
+                  form={
+                     activeTab === "details" || isNewStaffer
+                        ? "staffer-form"
+                        : undefined
+                  }
+                  onClick={
+                     activeTab === "timeoff" && !isNewStaffer
+                        ? handleFormSubmit
+                        : undefined
+                  }
+                  disabled={loading}
+               >
+                  {loading
+                     ? staffer
+                        ? "Updating..."
+                        : "Creating..."
+                     : staffer
+                     ? "Update Staffer"
+                     : "Create Staffer"}
+               </Button>
+            </CardFooter>
          </Card>
       </Modal>
    );

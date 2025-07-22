@@ -2,12 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
    Calendar,
+   Check,
    ChevronDown,
    ChevronUp,
    Clock,
    Edit,
    Plus,
-   Save,
    Trash2,
    X,
 } from "lucide-react";
@@ -238,9 +238,7 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
       return true;
    };
 
-   const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-
+   const handleApply = () => {
       if (!validateForm()) {
          return;
       }
@@ -303,7 +301,7 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
                : "border-slate-200 bg-slate-50"
          }`}
       >
-         <form onSubmit={handleSubmit} className="space-y-4">
+         <div className="space-y-4">
             {formError && (
                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
                   {formError}
@@ -388,21 +386,22 @@ export function EditStafferTimeOff({ staffer }: EditStafferTimeOffProps) {
                </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-end space-x-2">
                <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={isCreate ? closeCreateForm : closeEditForm}
                >
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="w-3 h-3 mr-1" />
                   Cancel
                </Button>
-               <Button type="submit">
-                  <Save className="w-4 h-4 mr-2" />
-                  {isCreate ? "Add Entry" : "Update Entry"}
+               <Button type="button" size="sm" onClick={handleApply}>
+                  <Check className="w-3 h-3 mr-1" />
+                  Apply
                </Button>
             </div>
-         </form>
+         </div>
       </div>
    );
 
