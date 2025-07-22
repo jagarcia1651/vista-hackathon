@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ReactNode } from "react";
 
 interface PageHeaderProps {
    entityName: string; // e.g., "Staffers", "Projects", "Quotes"
@@ -6,6 +7,7 @@ interface PageHeaderProps {
    onCreateNew: () => void;
    createButtonText?: string; // Optional custom button text
    className?: string; // Optional additional styling
+   children?: ReactNode; // Optional content to render below the header
 }
 
 export function PageHeader({
@@ -14,6 +16,7 @@ export function PageHeader({
    onCreateNew,
    createButtonText,
    className = "mb-8",
+   children
 }: PageHeaderProps) {
    const defaultButtonText =
       createButtonText || `Create New ${entityName.slice(0, -1)}`; // Remove 's' from plural
@@ -29,6 +32,7 @@ export function PageHeader({
             </div>
             <Button onClick={onCreateNew}>{defaultButtonText}</Button>
          </div>
+         {children && <div className="mt-6">{children}</div>}
       </div>
    );
 }
