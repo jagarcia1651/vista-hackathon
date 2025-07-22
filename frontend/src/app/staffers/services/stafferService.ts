@@ -8,7 +8,7 @@ export interface Staffer {
    time_zone?: string;
    title: string;
    seniority_id?: string;
-   capacity: number;
+   capacity: number; // Float representing weekly hourly capacity
    created_at?: string;
    last_updated_at?: string;
    user_id?: string;
@@ -21,7 +21,7 @@ export interface CreateStafferData {
    time_zone?: string;
    title: string;
    seniority_id?: string;
-   capacity: number;
+   capacity: number; // Float representing weekly hourly capacity
    user_id?: string;
 }
 

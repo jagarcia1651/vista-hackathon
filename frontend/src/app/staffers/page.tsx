@@ -102,14 +102,14 @@ export default function StaffersPage() {
    };
 
    const getCapacityColor = (capacity: number) => {
-      if (capacity >= 90) return "text-red-600 bg-red-50";
-      if (capacity >= 70) return "text-orange-600 bg-orange-50";
-      if (capacity >= 50) return "text-green-600 bg-green-50";
-      return "text-slate-600 bg-slate-50";
+      if (capacity >= 45) return "text-red-600 bg-red-50"; // Over 45 hours - high workload
+      if (capacity >= 35) return "text-green-600 bg-green-50"; // 35-45 hours - good utilization
+      if (capacity >= 20) return "text-orange-600 bg-orange-50"; // 20-35 hours - part-time
+      return "text-slate-600 bg-slate-50"; // Under 20 hours - low capacity
    };
 
    const formatCapacity = (capacity: number) => {
-      return `${capacity}%`;
+      return `${capacity}h/week`;
    };
 
    if (loading) {
@@ -220,7 +220,7 @@ export default function StaffersPage() {
                                     Time Zone
                                  </th>
                                  <th className="text-left py-3 px-4 font-medium text-slate-900">
-                                    Capacity
+                                    Weekly Capacity
                                  </th>
                                  <th className="text-right py-3 px-4 font-medium text-slate-900">
                                     Actions

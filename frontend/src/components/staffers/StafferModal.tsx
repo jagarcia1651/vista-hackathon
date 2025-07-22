@@ -35,7 +35,7 @@ export function StafferModal({
       email: "",
       time_zone: "",
       title: "",
-      capacity: 100,
+      capacity: 40, // Default to 40 hours per week
    });
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState("");
@@ -63,7 +63,7 @@ export function StafferModal({
                email: "",
                time_zone: "",
                title: "",
-               capacity: 100,
+               capacity: 40, // Default to 40 hours per week
             });
          }
          setError("");
@@ -101,8 +101,9 @@ export function StafferModal({
          setError("Title is required");
          return false;
       }
-      if (formData.capacity < 0 || formData.capacity > 100) {
-         setError("Capacity must be between 0 and 100");
+      if (formData.capacity <= 0 || formData.capacity > 168) {
+         // Max 168 hours per week
+         setError("Capacity must be between 0 and 168 hours per week");
          return false;
       }
       return true;
@@ -288,23 +289,28 @@ export function StafferModal({
                            htmlFor="capacity"
                            className="text-sm font-medium text-slate-900"
                         >
-                           Capacity (%)
+                           Weekly Capacity (hours)
                         </label>
                         <Input
                            id="capacity"
                            type="number"
+                           step="0.5"
                            min="0"
-                           max="100"
+                           max="168"
                            value={formData.capacity}
                            onChange={(e) =>
                               handleInputChange(
                                  "capacity",
-                                 parseInt(e.target.value) || 0
+                                 parseFloat(e.target.value) || 0
                               )
                            }
-                           placeholder="100"
+                           placeholder="40"
                            required
                         />
+                        <div className="text-xs text-slate-500">
+                           Enter weekly working hours (e.g., 40 for full-time,
+                           20 for part-time)
+                        </div>
                      </div>
 
                      <div className="flex justify-end space-x-4 pt-4">
