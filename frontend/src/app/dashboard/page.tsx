@@ -1,10 +1,9 @@
-'use client'
-
-import { useAuth } from '@/contexts/AuthContext'
+import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function DashboardPage() {
-  const { user } = useAuth()
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   return (
     <div className="min-h-screen bg-slate-50">
