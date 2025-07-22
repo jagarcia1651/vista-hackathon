@@ -14,6 +14,8 @@ from .agents.project_management import (
     project_management_agent,
 )
 from .config import agent_config, app_config
+from .models.project import ProjectCreateRequest as PMProjectCreateRequest
+from .models.project import ProjectManagementRequest
 
 app = FastAPI(
     title="PSA Agent Backend",
@@ -48,27 +50,12 @@ class QuoteRequest(BaseModel):
     team_data: List[Dict[str, Any]]
 
 
-class ProjectManagementRequest(BaseModel):
-    query: str
-    project_context: Optional[str] = None
-
-
-class ProjectCreateRequest(BaseModel):
-    name: str
-    description: Optional[str] = None
-    client_id: str
-    duration: Optional[str] = None
-    budget: Optional[str] = None
-    team_size: Optional[str] = None
-    project_status: str = "RFP"
-    project_start_date: Optional[str] = None
-    project_due_date: Optional[str] = None
+# ProjectManagementRequest and ProjectCreateRequest now imported from models.project
 
 
 class CapacityAnalysisRequest(BaseModel):
-    projects: List[Dict[str, Any]]
-    resources: List[Dict[str, Any]]
-    time_horizon: str
+    staffers: List[Dict[str, Any]]
+    time_range: Dict[str, str]
 
 
 @app.get("/health")
@@ -135,7 +122,7 @@ async def create_project_plan(request: ProjectPlanRequest):
     Create a comprehensive project plan with resource allocation
     """
     try:
-        result = await orchestrator.plan_project_with_resources(
+        result = await orchestrator_run.plan_project_with_resources(
             request.project_data, request.available_resources
         )
         return result
@@ -151,7 +138,7 @@ async def generate_quote(request: QuoteRequest):
     Generate a comprehensive quote with project analysis and resource planning
     """
     try:
-        result = await orchestrator.generate_comprehensive_quote(
+        result = await orchestrator_run.generate_comprehensive_quote(
             request.project_spec, request.client_context, request.team_data
         )
         return result
@@ -181,18 +168,16 @@ async def project_management_query(request: ProjectManagementRequest):
 
 
 @app.post("/api/v1/project-management/create")
-async def create_project_plan_endpoint(request: ProjectCreateRequest):
+async def create_project_plan_endpoint(request: PMProjectCreateRequest):
     """
-    Create a comprehensive project plan with database integration
+    Create a comprehensive project plan with database integration using structured models
     """
     try:
+        # Convert structured request to dict format expected by create_comprehensive_project_plan
         project_data = {
-            "name": request.name,
+            "name": request.project_name,
             "description": request.description,
             "client_id": request.client_id,
-            "duration": request.duration,
-            "budget": request.budget,
-            "team_size": request.team_size,
             "project_status": request.project_status,
             "project_start_date": request.project_start_date,
             "project_due_date": request.project_due_date,
@@ -221,13 +206,13 @@ async def analyze_project_endpoint(project_id: str):
 
 
 @app.post("/api/v1/agent/capacity-analysis")
-async def analyze_capacity(request: CapacityAnalysisRequest):
+async def capacity_analysis(request: CapacityAnalysisRequest):
     """
-    Analyze portfolio capacity and optimization opportunities
+    Analyze team capacity and utilization
     """
     try:
-        result = await orchestrator.analyze_portfolio_capacity(
-            request.projects, request.resources, request.time_horizon
+        result = await orchestrator_run.analyze_capacity(
+            request.staffers, request.time_range
         )
         return result
     except Exception as e:

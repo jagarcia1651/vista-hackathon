@@ -11,6 +11,24 @@ from uuid import UUID, uuid4
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
+from ..models.project import (
+    ClientsResponse,
+    DatabaseResponse,
+    PhaseCreateRequest,
+    PhaseResponse,
+    Project,
+    ProjectCreateRequest,
+    ProjectDetailsResponse,
+    ProjectPhase,
+    ProjectResponse,
+    ProjectTask,
+    ProjectTeam,
+    ProjectUpdateRequest,
+    ProjectWithDetails,
+    StafferAssignment,
+    TaskCreateRequest,
+    TaskResponse,
+)
 from ..utils.supabase_client import supabase_client
 
 # Enhanced Project Management System Prompt
@@ -38,6 +56,7 @@ Real-time thinking examples you should demonstrate:
 Focus on providing actionable project management insights based on PSA best practices.
 Always structure your responses with clear phases, tasks, and timelines.
 When working with database operations, confirm success and provide structured feedback.
+Use the structured models to ensure data consistency and type safety.
 """
 
 
@@ -56,7 +75,7 @@ def _create_bedrock_model():
     return BedrockModel(model_id=model_id, region_name=region)
 
 
-# Database Tools for Project Management
+# Database Tools for Project Management with Structured Types
 @tool
 def create_project_record(
     project_name: str,
@@ -64,9 +83,9 @@ def create_project_record(
     project_status: str = "RFP",
     project_start_date: Optional[str] = None,
     project_due_date: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> ProjectResponse:
     """
-    Create a new project record in the database.
+    Create a new project record in the database using structured Project model.
 
     Args:
         project_name: Name of the project
@@ -76,11 +95,13 @@ def create_project_record(
         project_due_date: Project due date (YYYY-MM-DD format)
 
     Returns:
-        Dictionary with project creation result
+        ProjectResponse with structured project data
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return ProjectResponse(
+                success=False, error="Database connection not available"
+            )
 
         # Prepare project data
         project_data = {
@@ -97,72 +118,84 @@ def create_project_record(
         result = supabase_client.table("projects").insert(project_data).execute()
 
         if result.data:
-            return {
-                "success": True,
-                "project": result.data[0],
-                "message": f"Project '{project_name}' created successfully",
-            }
+            # Create structured Project model
+            project = Project(**result.data[0])
+            return ProjectResponse(
+                success=True,
+                project=project,
+                message=f"Project '{project_name}' created successfully",
+            )
         else:
-            return {"success": False, "error": "Failed to create project"}
+            return ProjectResponse(success=False, error="Failed to create project")
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return ProjectResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
-def update_project_record(project_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+def update_project_record(
+    project_id: str, updates: ProjectUpdateRequest
+) -> ProjectResponse:
     """
-    Update an existing project record.
+    Update an existing project record using structured update model.
 
     Args:
         project_id: UUID of the project to update
-        updates: Dictionary of fields to update
+        updates: ProjectUpdateRequest with fields to update
 
     Returns:
-        Dictionary with update result
+        ProjectResponse with updated project data
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return ProjectResponse(
+                success=False, error="Database connection not available"
+            )
 
-        # Add updated timestamp
-        updates["last_updated_at"] = datetime.utcnow().isoformat()
+        # Convert updates to dict, excluding None values
+        update_data = updates.model_dump(exclude_none=True)
+        update_data["last_updated_at"] = datetime.utcnow().isoformat()
 
         # Update project
         result = (
             supabase_client.table("projects")
-            .update(updates)
+            .update(update_data)
             .eq("project_id", project_id)
             .execute()
         )
 
         if result.data:
-            return {
-                "success": True,
-                "project": result.data[0],
-                "message": f"Project {project_id} updated successfully",
-            }
+            project = Project(**result.data[0])
+            return ProjectResponse(
+                success=True,
+                project=project,
+                message=f"Project {project_id} updated successfully",
+            )
         else:
-            return {"success": False, "error": "Project not found or update failed"}
+            return ProjectResponse(
+                success=False, error="Project not found or update failed"
+            )
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return ProjectResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
-def get_project_details(project_id: str) -> Dict[str, Any]:
+def get_project_details(project_id: str) -> ProjectDetailsResponse:
     """
-    Retrieve detailed project information including phases and tasks.
+    Retrieve detailed project information with structured models.
 
     Args:
         project_id: UUID of the project
 
     Returns:
-        Dictionary with complete project details
+        ProjectDetailsResponse with complete structured project details
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return ProjectDetailsResponse(
+                success=False, error="Database connection not available"
+            )
 
         # Get project with related data
         project_result = (
@@ -173,9 +206,10 @@ def get_project_details(project_id: str) -> Dict[str, Any]:
         )
 
         if not project_result.data:
-            return {"success": False, "error": "Project not found"}
+            return ProjectDetailsResponse(success=False, error="Project not found")
 
-        project = project_result.data[0]
+        # Create structured models
+        project = Project(**project_result.data[0])
 
         # Get project phases
         phases_result = (
@@ -185,6 +219,7 @@ def get_project_details(project_id: str) -> Dict[str, Any]:
             .order("project_phase_number")
             .execute()
         )
+        phases = [ProjectPhase(**phase) for phase in (phases_result.data or [])]
 
         # Get project tasks
         tasks_result = (
@@ -193,6 +228,7 @@ def get_project_details(project_id: str) -> Dict[str, Any]:
             .eq("project_id", project_id)
             .execute()
         )
+        tasks = [ProjectTask(**task) for task in (tasks_result.data or [])]
 
         # Get project teams
         teams_result = (
@@ -201,56 +237,41 @@ def get_project_details(project_id: str) -> Dict[str, Any]:
             .eq("project_id", project_id)
             .execute()
         )
+        teams = [ProjectTeam(**team) for team in (teams_result.data or [])]
 
-        return {
-            "success": True,
-            "project": project,
-            "phases": phases_result.data or [],
-            "tasks": tasks_result.data or [],
-            "teams": teams_result.data or [],
-        }
+        return ProjectDetailsResponse(
+            success=True, project=project, phases=phases, tasks=tasks, teams=teams
+        )
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return ProjectDetailsResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
-def create_project_phase(
-    project_id: str,
-    phase_name: str,
-    phase_description: str,
-    phase_number: int,
-    phase_status: str = "Planned",
-    phase_start_date: Optional[str] = None,
-    phase_due_date: Optional[str] = None,
-) -> Dict[str, Any]:
+def create_project_phase(phase_request: PhaseCreateRequest) -> PhaseResponse:
     """
-    Create a new project phase.
+    Create a new project phase using structured request model.
 
     Args:
-        project_id: UUID of the parent project
-        phase_name: Name of the phase
-        phase_description: Description of the phase
-        phase_number: Order number of the phase
-        phase_status: Status of the phase (Planned, Active, Completed, etc.)
-        phase_start_date: Phase start date
-        phase_due_date: Phase due date
+        phase_request: PhaseCreateRequest with phase details
 
     Returns:
-        Dictionary with phase creation result
+        PhaseResponse with created phase data
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return PhaseResponse(
+                success=False, error="Database connection not available"
+            )
 
         phase_data = {
-            "project_id": project_id,
-            "project_phase_name": phase_name,
-            "project_phase_description": phase_description,
-            "project_phase_number": phase_number,
-            "project_phase_status": phase_status,
-            "project_phase_start_date": phase_start_date,
-            "project_phase_due_date": phase_due_date,
+            "project_id": phase_request.project_id,
+            "project_phase_name": phase_request.phase_name,
+            "project_phase_description": phase_request.phase_description,
+            "project_phase_number": phase_request.phase_number,
+            "project_phase_status": phase_request.phase_status,
+            "project_phase_start_date": phase_request.phase_start_date,
+            "project_phase_due_date": phase_request.phase_due_date,
             "created_at": datetime.utcnow().isoformat(),
             "last_updated_at": datetime.utcnow().isoformat(),
         }
@@ -258,58 +279,45 @@ def create_project_phase(
         result = supabase_client.table("project_phases").insert(phase_data).execute()
 
         if result.data:
-            return {
-                "success": True,
-                "phase": result.data[0],
-                "message": f"Phase '{phase_name}' created successfully",
-            }
+            phase = ProjectPhase(**result.data[0])
+            return PhaseResponse(
+                success=True,
+                phase=phase,
+                message=f"Phase '{phase_request.phase_name}' created successfully",
+            )
         else:
-            return {"success": False, "error": "Failed to create phase"}
+            return PhaseResponse(success=False, error="Failed to create phase")
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return PhaseResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
-def create_project_task(
-    project_id: str,
-    task_name: str,
-    task_description: str,
-    project_phase_id: Optional[str] = None,
-    task_status: str = "To Do",
-    task_start_date: Optional[str] = None,
-    task_due_date: Optional[str] = None,
-    estimated_hours: Optional[int] = None,
-) -> Dict[str, Any]:
+def create_project_task(task_request: TaskCreateRequest) -> TaskResponse:
     """
-    Create a new project task.
+    Create a new project task using structured request model.
 
     Args:
-        project_id: UUID of the parent project
-        task_name: Name of the task
-        task_description: Description of the task
-        project_phase_id: UUID of the parent phase (optional)
-        task_status: Status of the task
-        task_start_date: Task start date
-        task_due_date: Task due date
-        estimated_hours: Estimated hours for the task
+        task_request: TaskCreateRequest with task details
 
     Returns:
-        Dictionary with task creation result
+        TaskResponse with created task data
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return TaskResponse(
+                success=False, error="Database connection not available"
+            )
 
         task_data = {
-            "project_id": project_id,
-            "project_phase_id": project_phase_id,
-            "project_task_name": task_name,
-            "project_task_description": task_description,
-            "project_task_status": task_status,
-            "project_task_start_date": task_start_date,
-            "project_task_due_date": task_due_date,
-            "estimated_hours": estimated_hours,
+            "project_id": task_request.project_id,
+            "project_phase_id": task_request.project_phase_id,
+            "project_task_name": task_request.task_name,
+            "project_task_description": task_request.task_description,
+            "project_task_status": task_request.task_status,
+            "project_task_start_date": task_request.task_start_date,
+            "project_task_due_date": task_request.task_due_date,
+            "estimated_hours": task_request.estimated_hours,
             "created_at": datetime.utcnow().isoformat(),
             "last_updated_at": datetime.utcnow().isoformat(),
         }
@@ -317,99 +325,98 @@ def create_project_task(
         result = supabase_client.table("project_tasks").insert(task_data).execute()
 
         if result.data:
-            return {
-                "success": True,
-                "task": result.data[0],
-                "message": f"Task '{task_name}' created successfully",
-            }
+            task = ProjectTask(**result.data[0])
+            return TaskResponse(
+                success=True,
+                task=task,
+                message=f"Task '{task_request.task_name}' created successfully",
+            )
         else:
-            return {"success": False, "error": "Failed to create task"}
+            return TaskResponse(success=False, error="Failed to create task")
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return TaskResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
-def get_available_clients() -> Dict[str, Any]:
+def get_available_clients() -> ClientsResponse:
     """
     Retrieve list of available clients for project creation.
 
     Returns:
-        Dictionary with list of clients
+        ClientsResponse with structured client data
     """
     try:
         if not supabase_client:
-            return {"success": False, "error": "Database connection not available"}
+            return ClientsResponse(
+                success=False, error="Database connection not available"
+            )
 
         result = (
             supabase_client.table("clients").select("client_id, client_name").execute()
         )
 
-        return {"success": True, "clients": result.data or []}
+        return ClientsResponse(success=True, clients=result.data or [])
 
     except Exception as e:
-        return {"success": False, "error": f"Database error: {str(e)}"}
+        return ClientsResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
 def analyze_project_status(project_id: str) -> Dict[str, Any]:
     """
-    Analyze current project status and provide recommendations.
+    Analyze current project status using structured models and provide recommendations.
 
     Args:
         project_id: UUID of the project to analyze
 
     Returns:
-        Dictionary with project analysis and recommendations
+        Dictionary with structured project analysis and recommendations
     """
     try:
-        # Get project details
-        project_data = get_project_details(project_id)
+        # Get structured project details
+        project_details = get_project_details(project_id)
 
-        if not project_data["success"]:
-            return project_data
+        if not project_details.success:
+            return {"success": False, "error": project_details.error}
 
-        project = project_data["project"]
-        phases = project_data["phases"]
-        tasks = project_data["tasks"]
+        project = project_details.project
+        phases = project_details.phases
+        tasks = project_details.tasks
 
-        # Analyze status
+        # Analyze status using structured data
         analysis = {
-            "project_name": project["project_name"],
-            "current_status": project["project_status"],
+            "project_name": project.project_name,
+            "current_status": project.project_status,
             "total_phases": len(phases),
             "total_tasks": len(tasks),
             "completed_tasks": len(
-                [t for t in tasks if t["project_task_status"] == "Completed"]
+                [t for t in tasks if t.project_task_status == "Completed"]
             ),
             "active_tasks": len(
-                [
-                    t
-                    for t in tasks
-                    if t["project_task_status"] in ["In Progress", "Active"]
-                ]
+                [t for t in tasks if t.project_task_status in ["In Progress", "Active"]]
             ),
             "overdue_tasks": [],
             "upcoming_milestones": [],
             "recommendations": [],
         }
 
-        # Check for overdue tasks
+        # Check for overdue tasks using structured models
         current_date = datetime.now().date()
         for task in tasks:
-            if task["project_task_due_date"] and task["project_task_status"] not in [
+            if task.project_task_due_date and task.project_task_status not in [
                 "Completed",
                 "Cancelled",
             ]:
                 try:
                     due_date = datetime.strptime(
-                        task["project_task_due_date"], "%Y-%m-%d"
+                        task.project_task_due_date, "%Y-%m-%d"
                     ).date()
                     if due_date < current_date:
                         analysis["overdue_tasks"].append(
                             {
-                                "task_name": task["project_task_name"],
-                                "due_date": task["project_task_due_date"],
+                                "task_name": task.project_task_name,
+                                "due_date": task.project_task_due_date,
                                 "days_overdue": (current_date - due_date).days,
                             }
                         )
@@ -446,8 +453,7 @@ def analyze_project_status(project_id: str) -> Dict[str, Any]:
 @tool
 def project_management_agent(query: str, project_context: Optional[str] = None) -> str:
     """
-    Handle project management queries including planning, analysis, and optimization.
-    Enhanced with database integration and real-time thinking.
+    Handle project management queries with structured models and database integration.
 
     Args:
         query: Project management question or request
@@ -457,7 +463,7 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
         Structured project management response with actionable recommendations
     """
     try:
-        # Create specialized project management agent with tools
+        # Create specialized project management agent with structured tools
         bedrock_model = _create_bedrock_model()
 
         pm_agent = Agent(
@@ -491,34 +497,46 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
 
 def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a comprehensive project plan with phases and tasks using the enhanced agent
+    Create a comprehensive project plan using structured models and the enhanced agent
     """
+    # Create structured project request
+    project_request = ProjectCreateRequest(
+        project_name=project_data.get("name", "Unnamed Project"),
+        client_id=project_data.get("client_id", ""),
+        project_status=project_data.get("project_status", "RFP"),
+        project_start_date=project_data.get("project_start_date"),
+        project_due_date=project_data.get("project_due_date"),
+        description=project_data.get("description"),
+    )
+
     query = f"""
     Create a comprehensive project plan for the following project:
 
     Project Details:
-    - Name: {project_data.get('name', 'Unnamed Project')}
-    - Description: {project_data.get('description', 'No description provided')}
+    - Name: {project_request.project_name}
+    - Description: {project_request.description or 'No description provided'}
     - Duration: {project_data.get('duration', 'Not specified')}
     - Budget: {project_data.get('budget', 'Not specified')}
     - Team Size: {project_data.get('team_size', 'Not specified')}
-    - Client ID: {project_data.get('client_id', 'Not specified')}
+    - Client ID: {project_request.client_id}
+    - Status: {project_request.project_status}
 
     Please provide:
-    1. Create the project record in the database
+    1. Create the project record in the database using the structured models
     2. Project phases breakdown with timeline
     3. Key milestones and deliverables
     4. Resource requirements analysis
     5. Risk assessment and mitigation strategies
     6. Success criteria and KPIs
 
-    Think through each step and use the available database tools to create the actual project structure.
+    Think through each step and use the available database tools with structured types to create the actual project structure.
     """
 
     response = project_management_agent(query)
 
     return {
         "project_plan": response,
+        "project_request": project_request.model_dump(),
         "status": "generated",
         "agent": "project_management",
         "timestamp": datetime.utcnow().isoformat(),
@@ -527,20 +545,20 @@ def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str,
 
 def analyze_project_health(project_id: str) -> Dict[str, Any]:
     """
-    Comprehensive project health analysis using the enhanced agent
+    Comprehensive project health analysis using structured models and the enhanced agent
     """
     query = f"""
     Perform a comprehensive health check on project ID: {project_id}
 
     Please:
-    1. Retrieve current project details and status
+    1. Retrieve current project details and status using structured models
     2. Analyze project progress against timeline
     3. Identify any bottlenecks or risks
-    4. Review task completion rates
+    4. Review task completion rates using structured task data
     5. Check for overdue items
     6. Provide actionable recommendations for improvement
 
-    Use the database tools to get current project information and provide a detailed analysis.
+    Use the database tools with structured types to get current project information and provide a detailed analysis.
     """
 
     response = project_management_agent(
