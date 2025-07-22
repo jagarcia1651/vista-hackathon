@@ -2,10 +2,13 @@ from strands import Agent
 
 from .project_management import project_management_agent
 from .quotes import quotes_agent
+from .resource_management import resource_management_agent
 
 MAIN_SYSTEM_PROMPT = """
 You are an assistant that routes queries to specialized agents:
 - For queries related to quotes → Use the quotes_agent tool
+- For queries related to project management, planning, tasks, phases → Use the project_management_agent tool
+- For queries related to staffers, assignments, resource allocation → Use the resource_management_agent tool
 
 Always select the most appropriate tool based on the user's query.
 """
@@ -14,7 +17,7 @@ orchestrator = Agent(
     name="orchestrator",
     system_prompt=MAIN_SYSTEM_PROMPT,
     callback_handler=None,
-    tools=[quotes_agent, project_management_agent],
+    tools=[quotes_agent, project_management_agent, resource_management_agent],
 )
 
 
