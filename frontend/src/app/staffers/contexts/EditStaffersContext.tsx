@@ -12,6 +12,7 @@ import {
    Skill,
    Staffer,
    StafferRate,
+   StafferTimeOff,
 } from "../../../../../shared/schemas/typescript/staffer";
 import { skillsService } from "../services/skillsService";
 import { stafferRateService } from "../services/stafferRateService";
@@ -20,6 +21,10 @@ import {
    StafferSkillWithDetails,
    staffersSkillsService,
 } from "../services/staffersSkillsService";
+import {
+   CreateStafferTimeOffData,
+   stafferTimeOffService,
+} from "../services/stafferTimeOffService";
 import { useStaffers } from "./StaffersContext";
 
 interface PendingSkillUpdate {
@@ -39,6 +44,21 @@ interface PendingSkillDetails {
 interface PendingRateData {
    cost_rate: number;
    bill_rate: number;
+}
+
+interface PendingTimeOffUpdate {
+   time_off_id: string;
+   time_off_start_datetime?: string;
+   time_off_end_datetime?: string;
+   time_off_cumulative_hours?: number;
+}
+
+interface PendingTimeOffDetails {
+   tempId: string; // Temporary ID for new entries
+   staffer_id: string;
+   time_off_start_datetime: string;
+   time_off_end_datetime: string;
+   time_off_cumulative_hours: number;
 }
 
 interface EditStaffersContextType {
@@ -61,6 +81,13 @@ interface EditStaffersContextType {
    currentRate: StafferRate | null;
    pendingRateData: PendingRateData | null;
    rateLoading: boolean;
+
+   // Time off state
+   timeOffEntries: StafferTimeOff[];
+   pendingTimeOffAdditions: PendingTimeOffDetails[];
+   pendingTimeOffDeletions: string[];
+   pendingTimeOffUpdates: PendingTimeOffUpdate[];
+   timeOffLoading: boolean;
 
    // Pending changes
    pendingSkillAdditions: string[];
@@ -97,6 +124,23 @@ interface EditStaffersContextType {
    // Rate handlers
    handleRateChange: (field: "cost_rate" | "bill_rate", value: number) => void;
 
+   // Time off handlers
+   handleAddTimeOff: (
+      timeOffData: Omit<CreateStafferTimeOffData, "staffer_id">
+   ) => void;
+   handleUpdateTimeOff: (
+      timeOffId: string,
+      field: string,
+      value: string | number
+   ) => void;
+   handleDeleteTimeOff: (timeOffId: string) => void;
+   handleDeletePendingTimeOff: (tempId: string) => void;
+   handleUpdatePendingTimeOff: (
+      tempId: string,
+      field: string,
+      value: string | number
+   ) => void;
+
    // Utility functions
    getPendingUpdateValue: (
       stafferSkillId: string,
@@ -106,6 +150,13 @@ interface EditStaffersContextType {
    getPendingSkillValue: (skillId: string, field: string) => string;
    getVisibleStafferSkills: () => StafferSkillWithDetails[];
    getCurrentRateValue: (field: "cost_rate" | "bill_rate") => number;
+   getVisibleTimeOffEntries: () => StafferTimeOff[];
+   getPendingTimeOffUpdateValue: (
+      timeOffId: string,
+      field: string,
+      originalValue: string | number | undefined
+   ) => string | number;
+   getPendingTimeOffValue: (tempId: string, field: string) => string | number;
 
    // Control functions
    resetForm: () => void;
@@ -161,6 +212,19 @@ export function EditStaffersProvider({
    const [pendingRateData, setPendingRateData] =
       useState<PendingRateData | null>(null);
    const [rateLoading, setRateLoading] = useState(false);
+
+   // Time off state
+   const [timeOffEntries, setTimeOffEntries] = useState<StafferTimeOff[]>([]);
+   const [pendingTimeOffAdditions, setPendingTimeOffAdditions] = useState<
+      PendingTimeOffDetails[]
+   >([]);
+   const [pendingTimeOffDeletions, setPendingTimeOffDeletions] = useState<
+      string[]
+   >([]);
+   const [pendingTimeOffUpdates, setPendingTimeOffUpdates] = useState<
+      PendingTimeOffUpdate[]
+   >([]);
+   const [timeOffLoading, setTimeOffLoading] = useState(false);
 
    // Pending changes
    const [pendingSkillAdditions, setPendingSkillAdditions] = useState<string[]>(
@@ -236,6 +300,22 @@ export function EditStaffersProvider({
                   setRateLoading(false);
                };
                loadStafferRate();
+
+               // Load staffer time off
+               const loadStafferTimeOff = async () => {
+                  setTimeOffLoading(true);
+                  const { data, error } =
+                     await stafferTimeOffService.getStafferTimeOff(
+                        currentStaffer.id
+                     );
+                  if (data && !error) {
+                     setTimeOffEntries(data);
+                  } else {
+                     setTimeOffEntries([]);
+                  }
+                  setTimeOffLoading(false);
+               };
+               loadStafferTimeOff();
             }
          } else {
             // Reset form for new staffer
@@ -250,6 +330,7 @@ export function EditStaffersProvider({
             });
             setStafferSkills([]);
             setCurrentRate(null);
+            setTimeOffEntries([]);
          }
 
          // Reset all pending changes
@@ -258,6 +339,9 @@ export function EditStaffersProvider({
          setPendingSkillUpdates([]);
          setPendingSkillDetails([]);
          setPendingRateData(null);
+         setPendingTimeOffAdditions([]);
+         setPendingTimeOffDeletions([]);
+         setPendingTimeOffUpdates([]);
          setExpandedSkills(new Set());
          setError("");
          setSkillSearchQuery("");
@@ -361,8 +445,23 @@ export function EditStaffersProvider({
          }
       }
 
+      // Time off validation
+      for (const timeOff of pendingTimeOffAdditions) {
+         if (
+            new Date(timeOff.time_off_start_datetime) >=
+            new Date(timeOff.time_off_end_datetime)
+         ) {
+            setError("End date must be after start date for time off entries");
+            return false;
+         }
+         if (timeOff.time_off_cumulative_hours <= 0) {
+            setError("Time off hours must be greater than 0");
+            return false;
+         }
+      }
+
       return true;
-   }, [formData, pendingRateData]);
+   }, [formData, pendingRateData, pendingTimeOffAdditions]);
 
    const applySkillChanges = useCallback(
       async (stafferId: string) => {
@@ -445,6 +544,48 @@ export function EditStaffersProvider({
       [currentRate, pendingRateData]
    );
 
+   const applyTimeOffChanges = useCallback(
+      async (stafferId: string) => {
+         const promises = [];
+
+         // Apply time off deletions
+         for (const timeOffId of pendingTimeOffDeletions) {
+            promises.push(
+               stafferTimeOffService.deleteStafferTimeOff(timeOffId)
+            );
+         }
+
+         // Apply time off updates
+         for (const update of pendingTimeOffUpdates) {
+            const updateData = { ...update };
+            promises.push(
+               stafferTimeOffService.updateStafferTimeOff(updateData)
+            );
+         }
+
+         // Apply time off additions
+         for (const timeOffData of pendingTimeOffAdditions) {
+            const { tempId, ...createData } = timeOffData;
+            promises.push(
+               stafferTimeOffService.createStafferTimeOff({
+                  ...createData,
+                  staffer_id: stafferId,
+               })
+            );
+         }
+
+         if (promises.length > 0) {
+            try {
+               await Promise.all(promises);
+            } catch (err) {
+               console.error("Error applying time off changes:", err);
+               throw new Error("Failed to update time off entries");
+            }
+         }
+      },
+      [pendingTimeOffDeletions, pendingTimeOffUpdates, pendingTimeOffAdditions]
+   );
+
    const handleSubmit = useCallback(
       async (e: React.FormEvent) => {
          e.preventDefault();
@@ -506,6 +647,16 @@ export function EditStaffersProvider({
                   await applyRateChanges(stafferId);
                }
 
+               // Apply time off changes if there are any
+               const hasTimeOffChanges =
+                  pendingTimeOffAdditions.length > 0 ||
+                  pendingTimeOffDeletions.length > 0 ||
+                  pendingTimeOffUpdates.length > 0;
+
+               if (hasTimeOffChanges) {
+                  await applyTimeOffChanges(stafferId);
+               }
+
                onSuccess();
                onClose();
             }
@@ -529,8 +680,12 @@ export function EditStaffersProvider({
          pendingSkillDeletions,
          pendingSkillUpdates,
          pendingRateData,
+         pendingTimeOffAdditions,
+         pendingTimeOffDeletions,
+         pendingTimeOffUpdates,
          applySkillChanges,
          applyRateChanges,
+         applyTimeOffChanges,
          refreshStaffers,
          onSuccess,
          onClose,
@@ -658,6 +813,68 @@ export function EditStaffersProvider({
       [currentRate]
    );
 
+   // Time off handlers
+   const handleAddTimeOff = useCallback(
+      (timeOffData: Omit<CreateStafferTimeOffData, "staffer_id">) => {
+         if (!staffer?.id) return;
+
+         const tempId = `temp-${Date.now()}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+
+         setPendingTimeOffAdditions((prev) => [
+            ...prev,
+            {
+               tempId,
+               staffer_id: staffer.id,
+               ...timeOffData,
+            },
+         ]);
+      },
+      [staffer?.id]
+   );
+
+   const handleUpdateTimeOff = useCallback(
+      (timeOffId: string, field: string, value: string | number) => {
+         setPendingTimeOffUpdates((prev) => {
+            const existing = prev.find(
+               (update) => update.time_off_id === timeOffId
+            );
+            if (existing) {
+               return prev.map((update) =>
+                  update.time_off_id === timeOffId
+                     ? { ...update, [field]: value }
+                     : update
+               );
+            } else {
+               return [...prev, { time_off_id: timeOffId, [field]: value }];
+            }
+         });
+      },
+      []
+   );
+
+   const handleDeleteTimeOff = useCallback((timeOffId: string) => {
+      setPendingTimeOffDeletions((prev) => [...prev, timeOffId]);
+   }, []);
+
+   const handleDeletePendingTimeOff = useCallback((tempId: string) => {
+      setPendingTimeOffAdditions((prev) =>
+         prev.filter((entry) => entry.tempId !== tempId)
+      );
+   }, []);
+
+   const handleUpdatePendingTimeOff = useCallback(
+      (tempId: string, field: string, value: string | number) => {
+         setPendingTimeOffAdditions((prev) => {
+            return prev.map((entry) =>
+               entry.tempId === tempId ? { ...entry, [field]: value } : entry
+            );
+         });
+      },
+      []
+   );
+
    // Utility functions
    const getPendingUpdateValue = useCallback(
       (
@@ -704,12 +921,49 @@ export function EditStaffersProvider({
       [pendingRateData, currentRate]
    );
 
+   const getVisibleTimeOffEntries = useCallback((): StafferTimeOff[] => {
+      return timeOffEntries.filter(
+         (entry) => !pendingTimeOffDeletions.includes(entry.time_off_id)
+      );
+   }, [timeOffEntries, pendingTimeOffDeletions]);
+
+   const getPendingTimeOffUpdateValue = useCallback(
+      (
+         timeOffId: string,
+         field: string,
+         originalValue: string | number | undefined
+      ): string | number => {
+         const pendingUpdate = pendingTimeOffUpdates.find(
+            (update) => update.time_off_id === timeOffId
+         );
+         return (
+            pendingUpdate?.[field as keyof PendingTimeOffUpdate] ??
+            originalValue ??
+            ""
+         );
+      },
+      [pendingTimeOffUpdates]
+   );
+
+   const getPendingTimeOffValue = useCallback(
+      (tempId: string, field: string): string | number => {
+         const pendingEntry = pendingTimeOffAdditions.find(
+            (entry) => entry.tempId === tempId
+         );
+         return pendingEntry?.[field as keyof PendingTimeOffDetails] ?? "";
+      },
+      [pendingTimeOffAdditions]
+   );
+
    const resetForm = useCallback(() => {
       setPendingSkillAdditions([]);
       setPendingSkillDeletions([]);
       setPendingSkillUpdates([]);
       setPendingSkillDetails([]);
       setPendingRateData(null);
+      setPendingTimeOffAdditions([]);
+      setPendingTimeOffDeletions([]);
+      setPendingTimeOffUpdates([]);
       setExpandedSkills(new Set());
       setError("");
       setSkillSearchQuery("");
@@ -737,6 +991,13 @@ export function EditStaffersProvider({
       pendingRateData,
       rateLoading,
 
+      // Time off state
+      timeOffEntries,
+      pendingTimeOffAdditions,
+      pendingTimeOffDeletions,
+      pendingTimeOffUpdates,
+      timeOffLoading,
+
       // Pending changes
       pendingSkillAdditions,
       pendingSkillDeletions,
@@ -761,11 +1022,21 @@ export function EditStaffersProvider({
       // Rate handlers
       handleRateChange,
 
+      // Time off handlers
+      handleAddTimeOff,
+      handleUpdateTimeOff,
+      handleDeleteTimeOff,
+      handleDeletePendingTimeOff,
+      handleUpdatePendingTimeOff,
+
       // Utility functions
       getPendingUpdateValue,
       getPendingSkillValue,
       getVisibleStafferSkills,
       getCurrentRateValue,
+      getVisibleTimeOffEntries,
+      getPendingTimeOffUpdateValue,
+      getPendingTimeOffValue,
 
       // Control functions
       resetForm,

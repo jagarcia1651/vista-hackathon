@@ -46,6 +46,9 @@ function StafferModalContent({
 
    if (!isOpen) return null;
 
+   // Only show tabs if staffer exists (editing mode)
+   const isNewStaffer = !staffer;
+
    const tabs = [
       {
          id: "details" as TabType,
@@ -53,12 +56,17 @@ function StafferModalContent({
          icon: User,
          description: "Basic information, rates, and skills",
       },
-      {
-         id: "timeoff" as TabType,
-         label: "Time Off",
-         icon: Calendar,
-         description: "PTO and leave entries",
-      },
+      // Only show Time Off tab for existing staffers
+      ...(isNewStaffer
+         ? []
+         : [
+              {
+                 id: "timeoff" as TabType,
+                 label: "Time Off",
+                 icon: Calendar,
+                 description: "PTO and leave entries",
+              },
+           ]),
    ];
 
    return (
@@ -74,34 +82,36 @@ function StafferModalContent({
                      : "Enter the details for the new team member"}
                </CardDescription>
 
-               {/* Tab Navigation */}
-               <div className="border-b border-slate-200 mt-4">
-                  <nav className="flex space-x-8">
-                     {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
+               {/* Tab Navigation - Only show if not a new staffer */}
+               {!isNewStaffer && (
+                  <div className="border-b border-slate-200 mt-4">
+                     <nav className="flex space-x-8">
+                        {tabs.map((tab) => {
+                           const Icon = tab.icon;
+                           const isActive = activeTab === tab.id;
 
-                        return (
-                           <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => setActiveTab(tab.id)}
-                              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                                 isActive
-                                    ? "border-blue-500 text-blue-600"
-                                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-                              }`}
-                           >
-                              <Icon className="w-4 h-4" />
-                              {tab.label}
-                           </button>
-                        );
-                     })}
-                  </nav>
-               </div>
+                           return (
+                              <button
+                                 key={tab.id}
+                                 type="button"
+                                 onClick={() => setActiveTab(tab.id)}
+                                 className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                    isActive
+                                       ? "border-blue-500 text-blue-600"
+                                       : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                                 }`}
+                              >
+                                 <Icon className="w-4 h-4" />
+                                 {tab.label}
+                              </button>
+                           );
+                        })}
+                     </nav>
+                  </div>
+               )}
             </CardHeader>
             <CardContent>
-               {activeTab === "details" ? (
+               {activeTab === "details" || isNewStaffer ? (
                   <form onSubmit={handleSubmit} className="space-y-6">
                      {error && (
                         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
