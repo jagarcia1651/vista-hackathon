@@ -1,5 +1,4 @@
 import { createClient } from "@/utils/supabase/client";
-import { SkillStatus } from "../../../../../shared/schemas/typescript/base";
 import {
    Skill,
    Staffer,
@@ -9,7 +8,7 @@ import {
 export interface CreateStafferSkillData {
    staffer_id: string;
    skill_id: string;
-   skill_status: SkillStatus;
+   skill_status: string;
    certification_active_date?: string;
    certification_expiry_date?: string;
 }
@@ -244,7 +243,7 @@ class StaffersSkillsService {
    }
 
    // Get staffers by skill status
-   async getStafferSkillsByStatus(skillStatus: SkillStatus) {
+   async getStafferSkillsByStatus(skillStatus: string) {
       try {
          const { data, error } = await this.supabase
             .from("staffer_skills")
@@ -288,7 +287,7 @@ class StaffersSkillsService {
                staffers!staffer_id (*)
             `
             )
-            .eq("skill_status", SkillStatus.CERTIFIED)
+            .eq("skill_status", "certified")
             .not("certification_expiry_date", "is", null)
             .lte("certification_expiry_date", beforeDate)
             .order("certification_expiry_date", { ascending: true });
