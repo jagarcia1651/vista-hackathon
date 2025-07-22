@@ -2,9 +2,10 @@
 
 import { EditStafferDetails } from "@/app/staffers/components/EditStafferDetails";
 import { EditStafferSkills } from "@/app/staffers/components/EditStafferSkills";
-import { useStaffers } from "@/app/staffers/contexts/StaffersContext";
-import { CreateStafferData } from "@/app/staffers/services/stafferService";
-import { staffersSkillsService } from "@/app/staffers/services/staffersSkillsService";
+import {
+   EditStaffersProvider,
+   useEditStaffers,
+} from "@/app/staffers/contexts/EditStaffersContext";
 import { Modal } from "@/components/shared/Modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,22 +15,7 @@ import {
    CardHeader,
    CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
 import { Staffer } from "../../../../shared/schemas/typescript/staffer";
-
-interface PendingSkillUpdate {
-   staffer_skill_id: string;
-   skill_status?: string;
-   certification_active_date?: string;
-   certification_expiry_date?: string;
-}
-
-interface PendingSkillDetails {
-   skill_id: string;
-   skill_status: string;
-   certification_active_date?: string;
-   certification_expiry_date?: string;
-}
 
 interface StafferModalProps {
    isOpen: boolean;
@@ -38,243 +24,19 @@ interface StafferModalProps {
    onSuccess: () => void;
 }
 
-export function StafferModal({
+function StafferModalContent({
    isOpen,
    onClose,
-   staffer = null,
-   onSuccess,
-}: StafferModalProps) {
-   const { seniorities, createStaffer, updateStaffer } = useStaffers();
-
-   const [loading, setLoading] = useState(false);
-   const [error, setError] = useState("");
-
-   // Track pending skill changes
-   const [pendingSkillAdditions, setPendingSkillAdditions] = useState<string[]>(
-      []
-   );
-   const [pendingSkillDeletions, setPendingSkillDeletions] = useState<string[]>(
-      []
-   );
-   const [pendingSkillUpdates, setPendingSkillUpdates] = useState<
-      PendingSkillUpdate[]
-   >([]);
-   const [pendingSkillDetails, setPendingSkillDetails] = useState<
-      PendingSkillDetails[]
-   >([]);
-
-   const [formData, setFormData] = useState<CreateStafferData>({
-      first_name: "",
-      last_name: "",
-      email: "",
-      time_zone: "",
-      title: "",
-      seniority_id: "",
-      capacity: 40,
-   });
-
-   // Reset form when modal opens/closes or staffer changes
-   useEffect(() => {
-      if (isOpen) {
-         if (staffer) {
-            // Populate form with existing staffer data
-            setFormData({
-               first_name: staffer.first_name || "",
-               last_name: staffer.last_name || "",
-               email: staffer.email || "",
-               time_zone: staffer.time_zone || "",
-               title: staffer.title || "",
-               seniority_id: staffer.seniority_id || "",
-               capacity: staffer.capacity || 40,
-            });
-         } else {
-            // Reset form for new staffer
-            setFormData({
-               first_name: "",
-               last_name: "",
-               email: "",
-               time_zone: "",
-               title: "",
-               seniority_id: "",
-               capacity: 40,
-            });
-         }
-         setError("");
-         // Reset pending skill changes when modal opens
-         setPendingSkillAdditions([]);
-         setPendingSkillDeletions([]);
-         setPendingSkillUpdates([]);
-         setPendingSkillDetails([]);
-      }
-   }, [staffer, isOpen]);
-
-   const handleInputChange = (
-      field: keyof CreateStafferData,
-      value: string | number
-   ) => {
-      setFormData((prev) => ({
-         ...prev,
-         [field]: value,
-      }));
-   };
-
-   const handleSkillsChange = (
-      pendingAdditions: string[],
-      pendingDeletions: string[],
-      pendingUpdates: PendingSkillUpdate[],
-      pendingDetails: PendingSkillDetails[]
-   ) => {
-      setPendingSkillAdditions(pendingAdditions);
-      setPendingSkillDeletions(pendingDeletions);
-      setPendingSkillUpdates(pendingUpdates);
-      setPendingSkillDetails(pendingDetails);
-   };
-
-   const validateForm = (): boolean => {
-      // Basic validation
-      if (!formData.first_name.trim()) {
-         setError("First name is required");
-         return false;
-      }
-      if (!formData.last_name.trim()) {
-         setError("Last name is required");
-         return false;
-      }
-      if (!formData.email.trim()) {
-         setError("Email is required");
-         return false;
-      }
-      if (!formData.title.trim()) {
-         setError("Title is required");
-         return false;
-      }
-      if (formData.capacity <= 0 || formData.capacity > 168) {
-         setError("Capacity must be between 0 and 168 hours per week");
-         return false;
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-         setError("Please enter a valid email address");
-         return false;
-      }
-
-      return true;
-   };
-
-   const applySkillChanges = async (stafferId: string) => {
-      const promises = [];
-
-      // Apply skill deletions
-      for (const stafferSkillId of pendingSkillDeletions) {
-         promises.push(
-            staffersSkillsService.deleteStafferSkill(stafferSkillId)
-         );
-      }
-
-      // Apply skill updates
-      for (const update of pendingSkillUpdates) {
-         const updateData = { ...update };
-         promises.push(staffersSkillsService.updateStafferSkill(updateData));
-      }
-
-      // Apply skill additions with detailed information
-      for (const skillId of pendingSkillAdditions) {
-         const skillDetails = pendingSkillDetails.find(
-            (detail) => detail.skill_id === skillId
-         );
-
-         promises.push(
-            staffersSkillsService.createStafferSkill({
-               staffer_id: stafferId,
-               skill_id: skillId,
-               skill_status: skillDetails?.skill_status || "competent",
-               certification_active_date:
-                  skillDetails?.certification_active_date || undefined,
-               certification_expiry_date:
-                  skillDetails?.certification_expiry_date || undefined,
-            })
-         );
-      }
-
-      if (promises.length > 0) {
-         try {
-            await Promise.all(promises);
-         } catch (err) {
-            console.error("Error applying skill changes:", err);
-            throw new Error("Failed to update skills");
-         }
-      }
-   };
-
-   const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-
-      if (!validateForm()) {
-         return;
-      }
-
-      setLoading(true);
-      setError("");
-
-      try {
-         // Clean up the form data - remove empty fields if not provided
-         const cleanedData = {
-            ...formData,
-            time_zone: formData.time_zone?.trim() || undefined,
-            seniority_id: formData.seniority_id?.trim() || undefined,
-         };
-
-         let success = false;
-         const stafferId = staffer?.id;
-
-         if (staffer?.id) {
-            // Update existing staffer
-            success = await updateStaffer({
-               id: staffer.id,
-               ...cleanedData,
-            });
-         } else {
-            // Create new staffer
-            success = await createStaffer(cleanedData);
-            // Note: For new staffers, we can't apply skills immediately
-            // since we don't have the staffer ID until after creation
-            // This would require a different approach or API design
-         }
-
-         if (success && stafferId) {
-            // Apply skill changes if there are any
-            const hasChanges =
-               pendingSkillAdditions.length > 0 ||
-               pendingSkillDeletions.length > 0 ||
-               pendingSkillUpdates.length > 0;
-
-            if (hasChanges) {
-               await applySkillChanges(stafferId);
-            }
-
-            onSuccess();
-            onClose();
-         }
-         // If not successful, error will be displayed from context
-      } catch (err) {
-         setError(
-            err instanceof Error ? err.message : "An unexpected error occurred"
-         );
-      } finally {
-         setLoading(false);
-      }
-   };
+   staffer,
+}: Omit<StafferModalProps, "onSuccess">) {
+   const { loading, error, handleSubmit, resetForm } = useEditStaffers();
 
    const handleClose = () => {
-      // Reset pending changes when cancelling
-      setPendingSkillAdditions([]);
-      setPendingSkillDeletions([]);
-      setPendingSkillUpdates([]);
-      setPendingSkillDetails([]);
+      resetForm();
       onClose();
    };
+
+   if (!isOpen) return null;
 
    return (
       <Modal isOpen={isOpen} onClose={handleClose}>
@@ -298,17 +60,10 @@ export function StafferModal({
                   )}
 
                   {/* Basic Information Section */}
-                  <EditStafferDetails
-                     formData={formData}
-                     onInputChange={handleInputChange}
-                     seniorities={seniorities}
-                  />
+                  <EditStafferDetails />
 
                   {/* Skills Section */}
-                  <EditStafferSkills
-                     staffer={staffer}
-                     onSkillsChange={handleSkillsChange}
-                  />
+                  <EditStafferSkills />
 
                   <div className="flex justify-end space-x-4 pt-4">
                      <Button
@@ -333,5 +88,26 @@ export function StafferModal({
             </CardContent>
          </Card>
       </Modal>
+   );
+}
+
+export function StafferModal({
+   isOpen,
+   onClose,
+   staffer = null,
+   onSuccess,
+}: StafferModalProps) {
+   return (
+      <EditStaffersProvider
+         staffer={staffer}
+         onSuccess={onSuccess}
+         onClose={onClose}
+      >
+         <StafferModalContent
+            isOpen={isOpen}
+            onClose={onClose}
+            staffer={staffer}
+         />
+      </EditStaffersProvider>
    );
 }

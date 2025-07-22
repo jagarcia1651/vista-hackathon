@@ -1,21 +1,11 @@
 import { Input } from "@/components/ui/input";
-import { Seniority } from "../../../../../shared/schemas/typescript/staffer";
-import { CreateStafferData } from "../services/stafferService";
+import { useEditStaffers } from "../contexts/EditStaffersContext";
+import { useStaffers } from "../contexts/StaffersContext";
 
-interface EditStafferDetailsProps {
-   formData: CreateStafferData;
-   onInputChange: (
-      field: keyof CreateStafferData,
-      value: string | number
-   ) => void;
-   seniorities: Seniority[];
-}
+export function EditStafferDetails() {
+   const { formData, handleInputChange } = useEditStaffers();
+   const { seniorities } = useStaffers();
 
-export function EditStafferDetails({
-   formData,
-   onInputChange,
-   seniorities,
-}: EditStafferDetailsProps) {
    return (
       <div className="space-y-4">
          <h3 className="text-lg font-medium text-slate-900">
@@ -34,7 +24,9 @@ export function EditStafferDetails({
                   id="first_name"
                   type="text"
                   value={formData.first_name}
-                  onChange={(e) => onInputChange("first_name", e.target.value)}
+                  onChange={(e) =>
+                     handleInputChange("first_name", e.target.value)
+                  }
                   placeholder="John"
                   required
                />
@@ -51,7 +43,9 @@ export function EditStafferDetails({
                   id="last_name"
                   type="text"
                   value={formData.last_name}
-                  onChange={(e) => onInputChange("last_name", e.target.value)}
+                  onChange={(e) =>
+                     handleInputChange("last_name", e.target.value)
+                  }
                   placeholder="Doe"
                   required
                />
@@ -69,7 +63,7 @@ export function EditStafferDetails({
                id="email"
                type="email"
                value={formData.email}
-               onChange={(e) => onInputChange("email", e.target.value)}
+               onChange={(e) => handleInputChange("email", e.target.value)}
                placeholder="john.doe@company.com"
                required
             />
@@ -86,7 +80,7 @@ export function EditStafferDetails({
                id="title"
                type="text"
                value={formData.title}
-               onChange={(e) => onInputChange("title", e.target.value)}
+               onChange={(e) => handleInputChange("title", e.target.value)}
                placeholder="Software Engineer"
                required
             />
@@ -105,7 +99,9 @@ export function EditStafferDetails({
                   id="time_zone"
                   type="text"
                   value={formData.time_zone || ""}
-                  onChange={(e) => onInputChange("time_zone", e.target.value)}
+                  onChange={(e) =>
+                     handleInputChange("time_zone", e.target.value)
+                  }
                   placeholder="America/New_York"
                />
             </div>
@@ -127,7 +123,7 @@ export function EditStafferDetails({
                      id="seniority_id"
                      value={formData.seniority_id || ""}
                      onChange={(e) =>
-                        onInputChange("seniority_id", e.target.value)
+                        handleInputChange("seniority_id", e.target.value)
                      }
                      className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -160,7 +156,7 @@ export function EditStafferDetails({
                max="168"
                value={formData.capacity}
                onChange={(e) =>
-                  onInputChange("capacity", parseFloat(e.target.value) || 0)
+                  handleInputChange("capacity", parseFloat(e.target.value) || 0)
                }
                placeholder="40"
                required

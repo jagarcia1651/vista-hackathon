@@ -1,160 +1,34 @@
 import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import {
-   Skill,
-   Staffer,
-} from "../../../../../shared/schemas/typescript/staffer";
-import { skillsService } from "../services/skillsService";
-import {
-   StafferSkillWithDetails,
-   staffersSkillsService,
-} from "../services/staffersSkillsService";
+import { useEffect, useRef } from "react";
+import { useEditStaffers } from "../contexts/EditStaffersContext";
 
-interface EditStafferSkillsProps {
-   staffer: Staffer | null;
-   onSkillsChange?: (
-      pendingAdditions: string[],
-      pendingDeletions: string[],
-      pendingUpdates: PendingSkillUpdate[],
-      pendingSkillDetails: PendingSkillDetails[]
-   ) => void;
-}
-
-interface PendingSkillUpdate {
-   staffer_skill_id: string;
-   skill_status?: string;
-   certification_active_date?: string;
-   certification_expiry_date?: string;
-}
-
-interface PendingSkillDetails {
-   skill_id: string;
-   skill_status: string;
-   certification_active_date?: string;
-   certification_expiry_date?: string;
-}
-
-export function EditStafferSkills({
-   staffer,
-   onSkillsChange,
-}: EditStafferSkillsProps) {
-   // Skills state
-   const [allSkills, setAllSkills] = useState<Skill[]>([]);
-   const [skillsLookup, setSkillsLookup] = useState<Record<string, Skill>>({});
-   const [stafferSkills, setStafferSkills] = useState<
-      StafferSkillWithDetails[]
-   >([]);
-   const [skillSearchQuery, setSkillSearchQuery] = useState("");
-   const [filteredSkills, setFilteredSkills] = useState<Skill[]>([]);
-   const [showSkillDropdown, setShowSkillDropdown] = useState(false);
-   const [skillsLoading, setSkillsLoading] = useState(false);
-   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
-   const skillSearchRef = useRef<HTMLDivElement>(null);
-
-   // Track pending changes (only applied on form submission)
-   const [pendingAdditions, setPendingAdditions] = useState<string[]>([]);
-   const [pendingDeletions, setPendingDeletions] = useState<string[]>([]);
-   const [pendingUpdates, setPendingUpdates] = useState<PendingSkillUpdate[]>(
-      []
-   );
-   const [pendingSkillDetails, setPendingSkillDetails] = useState<
-      PendingSkillDetails[]
-   >([]);
-
-   // Load all skills on mount and create lookup map
-   useEffect(() => {
-      const loadSkills = async () => {
-         const { data, error } = await skillsService.getAllSkills();
-         if (data && !error) {
-            setAllSkills(data);
-            // Create lookup map for fast skill name retrieval
-            const lookup = data.reduce((acc, skill) => {
-               acc[skill.skill_id] = skill;
-               return acc;
-            }, {} as Record<string, Skill>);
-            setSkillsLookup(lookup);
-         }
-      };
-      loadSkills();
-   }, []);
-
-   // Load staffer skills when staffer changes and reset pending changes
-   useEffect(() => {
-      setPendingAdditions([]);
-      setPendingDeletions([]);
-      setPendingUpdates([]);
-      setPendingSkillDetails([]);
-      setExpandedSkills(new Set());
-
-      if (staffer?.id) {
-         const loadStafferSkills = async () => {
-            setSkillsLoading(true);
-            const { data, error } =
-               await staffersSkillsService.getSkillsForStaffer(staffer.id);
-            if (data && !error) {
-               setStafferSkills(data);
-            }
-            setSkillsLoading(false);
-         };
-         loadStafferSkills();
-      } else {
-         setStafferSkills([]);
-      }
-   }, [staffer]);
-
-   // Notify parent of pending changes
-   useEffect(() => {
-      onSkillsChange?.(
-         pendingAdditions,
-         pendingDeletions,
-         pendingUpdates,
-         pendingSkillDetails
-      );
-   }, [
-      pendingAdditions,
-      pendingDeletions,
-      pendingUpdates,
-      pendingSkillDetails,
-      onSkillsChange,
-   ]);
-
-   // Filter skills based on search query and exclude already assigned/pending skills
-   useEffect(() => {
-      const assignedSkillIds = stafferSkills.map((ss) => ss.skill_id);
-      const allExcludedIds = [...assignedSkillIds, ...pendingAdditions];
-      let filtered: Skill[];
-
-      if (!skillSearchQuery.trim()) {
-         // Show all skills when no search query (and when focused)
-         filtered = allSkills.filter(
-            (skill) =>
-               !allExcludedIds.includes(skill.skill_id) &&
-               !pendingDeletions.includes(skill.skill_id)
-         );
-      } else {
-         // Filter based on search query
-         filtered = allSkills.filter(
-            (skill) =>
-               !allExcludedIds.includes(skill.skill_id) &&
-               !pendingDeletions.includes(skill.skill_id) &&
-               (skill.skill_name
-                  .toLowerCase()
-                  .includes(skillSearchQuery.toLowerCase()) ||
-                  skill.skill_description
-                     .toLowerCase()
-                     .includes(skillSearchQuery.toLowerCase()))
-         );
-      }
-
-      setFilteredSkills(filtered.slice(0, 20)); // Show more results for better UX
-   }, [
-      skillSearchQuery,
+export function EditStafferSkills() {
+   const {
       allSkills,
-      stafferSkills,
-      pendingAdditions,
-      pendingDeletions,
-   ]);
+      skillsLookup,
+      skillSearchQuery,
+      filteredSkills,
+      showSkillDropdown,
+      skillsLoading,
+      expandedSkills,
+      pendingSkillAdditions,
+      pendingSkillDeletions,
+      pendingSkillUpdates,
+      handleAddSkill,
+      handleRemoveSkill,
+      handleRemovePendingSkill,
+      handleSkillUpdate,
+      handlePendingSkillUpdate,
+      setSkillSearchQuery,
+      setShowSkillDropdown,
+      toggleSkillExpansion,
+      getPendingUpdateValue,
+      getPendingSkillValue,
+      getVisibleStafferSkills,
+   } = useEditStaffers();
+
+   const skillSearchRef = useRef<HTMLDivElement>(null);
 
    // Close skill dropdown when clicking outside
    useEffect(() => {
@@ -170,61 +44,7 @@ export function EditStafferSkills({
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
          document.removeEventListener("mousedown", handleClickOutside);
-   }, []);
-
-   const handleAddSkill = async (skill: Skill) => {
-      if (!staffer?.id) {
-         // For new staffers, just close the dropdown
-         setSkillSearchQuery("");
-         setShowSkillDropdown(false);
-         return;
-      }
-
-      // Add to pending additions for immediate visual feedback
-      setPendingAdditions((prev) => [...prev, skill.skill_id]);
-
-      // Initialize pending skill details with default values
-      setPendingSkillDetails((prev) => [
-         ...prev,
-         {
-            skill_id: skill.skill_id,
-            skill_status: "competent",
-            certification_active_date: "",
-            certification_expiry_date: "",
-         },
-      ]);
-
-      setSkillSearchQuery("");
-      setShowSkillDropdown(false);
-   };
-
-   const handleRemoveSkill = (stafferSkill: StafferSkillWithDetails) => {
-      if (!staffer?.id) return;
-
-      // Add to pending deletions for immediate visual feedback
-      setPendingDeletions((prev) => [...prev, stafferSkill.staffer_skill_id]);
-      // Remove from expanded if it was expanded
-      setExpandedSkills((prev) => {
-         const newSet = new Set(prev);
-         newSet.delete(stafferSkill.staffer_skill_id);
-         return newSet;
-      });
-   };
-
-   const handleRemovePendingSkill = (skillId: string) => {
-      // Remove from pending additions
-      setPendingAdditions((prev) => prev.filter((id) => id !== skillId));
-      // Remove from pending skill details
-      setPendingSkillDetails((prev) =>
-         prev.filter((detail) => detail.skill_id !== skillId)
-      );
-      // Remove from expanded if it was expanded
-      setExpandedSkills((prev) => {
-         const newSet = new Set(prev);
-         newSet.delete(`pending-${skillId}`);
-         return newSet;
-      });
-   };
+   }, [setShowSkillDropdown]);
 
    const handleSearchFocus = () => {
       setShowSkillDropdown(true);
@@ -236,82 +56,7 @@ export function EditStafferSkills({
       setShowSkillDropdown(true);
    };
 
-   const toggleSkillExpansion = (skillId: string) => {
-      setExpandedSkills((prev) => {
-         const newSet = new Set(prev);
-         if (newSet.has(skillId)) {
-            newSet.delete(skillId);
-         } else {
-            newSet.add(skillId);
-         }
-         return newSet;
-      });
-   };
-
-   const handleSkillUpdate = (
-      stafferSkillId: string,
-      field: string,
-      value: string
-   ) => {
-      setPendingUpdates((prev) => {
-         const existing = prev.find(
-            (update) => update.staffer_skill_id === stafferSkillId
-         );
-         if (existing) {
-            return prev.map((update) =>
-               update.staffer_skill_id === stafferSkillId
-                  ? { ...update, [field]: value }
-                  : update
-            );
-         } else {
-            return [
-               ...prev,
-               { staffer_skill_id: stafferSkillId, [field]: value },
-            ];
-         }
-      });
-   };
-
-   const handlePendingSkillUpdate = (
-      skillId: string,
-      field: string,
-      value: string
-   ) => {
-      setPendingSkillDetails((prev) => {
-         return prev.map((detail) =>
-            detail.skill_id === skillId ? { ...detail, [field]: value } : detail
-         );
-      });
-   };
-
-   const getPendingUpdateValue = (
-      stafferSkillId: string,
-      field: string,
-      originalValue: string | undefined
-   ): string => {
-      const pendingUpdate = pendingUpdates.find(
-         (update) => update.staffer_skill_id === stafferSkillId
-      );
-      return (
-         (pendingUpdate?.[field as keyof PendingSkillUpdate] as string) ||
-         originalValue ||
-         ""
-      );
-   };
-
-   const getPendingSkillValue = (skillId: string, field: string): string => {
-      const pendingDetail = pendingSkillDetails.find(
-         (detail) => detail.skill_id === skillId
-      );
-      return (
-         (pendingDetail?.[field as keyof PendingSkillDetails] as string) || ""
-      );
-   };
-
-   // Get visible skills (exclude pending deletions, include pending additions)
-   const visibleStafferSkills = stafferSkills.filter(
-      (ss) => !pendingDeletions.includes(ss.staffer_skill_id)
-   );
+   const visibleStafferSkills = getVisibleStafferSkills();
 
    return (
       <div className="space-y-4">
@@ -328,7 +73,6 @@ export function EditStafferSkills({
                   onChange={handleSearchChange}
                   onFocus={handleSearchFocus}
                   className="pl-10"
-                  disabled={!staffer?.id && !!staffer}
                />
             </div>
 
@@ -377,16 +121,11 @@ export function EditStafferSkills({
             )}
          </div>
 
-         {!staffer?.id && (
-            <div className="text-sm text-slate-500 italic">
-               Skills can be added after creating the staffer
-            </div>
-         )}
-
          {/* Current Skills as Accordion Tiles */}
          {skillsLoading ? (
             <div className="text-sm text-slate-500">Loading skills...</div>
-         ) : visibleStafferSkills.length > 0 || pendingAdditions.length > 0 ? (
+         ) : visibleStafferSkills.length > 0 ||
+           pendingSkillAdditions.length > 0 ? (
             <div className="space-y-3">
                <label className="text-sm font-medium text-slate-900">
                   Current Skills
@@ -557,7 +296,7 @@ export function EditStafferSkills({
                })}
 
                {/* Pending additions */}
-               {pendingAdditions.map((skillId) => {
+               {pendingSkillAdditions.map((skillId) => {
                   const skill = skillsLookup[skillId];
                   const pendingId = `pending-${skillId}`;
                   const isExpanded = expandedSkills.has(pendingId);
@@ -716,17 +455,17 @@ export function EditStafferSkills({
                   );
                })}
 
-               {(pendingAdditions.length > 0 ||
-                  pendingDeletions.length > 0 ||
-                  pendingUpdates.length > 0) && (
+               {(pendingSkillAdditions.length > 0 ||
+                  pendingSkillDeletions.length > 0 ||
+                  pendingSkillUpdates.length > 0) && (
                   <div className="text-xs text-slate-500 italic">
                      Changes will be applied when you save the staffer
                   </div>
                )}
             </div>
-         ) : staffer?.id ? (
+         ) : (
             <div className="text-sm text-slate-500">No skills assigned yet</div>
-         ) : null}
+         )}
       </div>
    );
 }
