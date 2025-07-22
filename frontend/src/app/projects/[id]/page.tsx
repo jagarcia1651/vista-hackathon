@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import type { Project, ProjectTask } from "@/types/project";
+import type { Project, ProjectTask, ProjectPhase } from "@/types/project";
 import { ProjectStatus } from "@/types/base";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,11 @@ import Link from "next/link";
 import { ProjectModal } from "../components/ProjectModal";
 import { TaskModal } from "../components/TaskModal";
 import { TasksGrid } from "../components/TasksGrid";
+import { ProjectPhases } from "../components/ProjectPhases";
+import { PhaseModal } from "../components/PhaseModal";
 import { projectService } from "../services/projectService";
 import { taskService } from "../services/taskService";
+import { phaseService } from "../services/phaseService";
 import { Plus } from "lucide-react";
 
 export default function ProjectPage({
@@ -21,15 +24,21 @@ export default function ProjectPage({
    const { id } = use(params);
    const [project, setProject] = useState<Project | null>(null);
    const [tasks, setTasks] = useState<ProjectTask[]>([]);
+   const [phases, setPhases] = useState<ProjectPhase[]>([]);
    const [loading, setLoading] = useState(true);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+   const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
    const [selectedTask, setSelectedTask] = useState<ProjectTask | undefined>();
+   const [selectedPhase, setSelectedPhase] = useState<
+      ProjectPhase | undefined
+   >();
    const [error, setError] = useState<string | null>(null);
 
    useEffect(() => {
       fetchProject();
       fetchTasks();
+      fetchPhases();
    }, [id]);
 
    async function fetchProject() {
@@ -59,6 +68,17 @@ export default function ProjectPage({
       setTasks(data || []);
    }
 
+   async function fetchPhases() {
+      const { data, error } = await phaseService.getProjectPhases(id);
+
+      if (error) {
+         console.error("Error fetching phases:", error);
+         return;
+      }
+
+      setPhases(data || []);
+   }
+
    const handleEditTask = (task: ProjectTask) => {
       setSelectedTask(task);
       setIsTaskModalOpen(true);
@@ -74,6 +94,22 @@ export default function ProjectPage({
       }
 
       fetchTasks();
+   };
+
+   const handleAddPhase = () => {
+      setSelectedPhase(undefined);
+      setIsPhaseModalOpen(true);
+   };
+
+   const handleEditPhase = (phase: ProjectPhase) => {
+      setSelectedPhase(phase);
+      setIsPhaseModalOpen(true);
+   };
+
+   const handlePhaseSuccess = () => {
+      setIsPhaseModalOpen(false);
+      setSelectedPhase(undefined);
+      fetchPhases();
    };
 
    if (loading) {
@@ -189,6 +225,13 @@ export default function ProjectPage({
                </Card>
             </div>
 
+            {/* Project Phases */}
+            <ProjectPhases
+               phases={phases}
+               onAddPhase={handleAddPhase}
+               onEditPhase={handleEditPhase}
+            />
+
             {/* Tasks Section */}
             <div>
                <div className="flex justify-between items-center mb-4">
@@ -225,6 +268,17 @@ export default function ProjectPage({
                   setSelectedTask(undefined);
                   fetchTasks();
                }}
+            />
+
+            <PhaseModal
+               projectId={id}
+               phase={selectedPhase}
+               isOpen={isPhaseModalOpen}
+               onClose={() => {
+                  setIsPhaseModalOpen(false);
+                  setSelectedPhase(undefined);
+               }}
+               onSuccess={handlePhaseSuccess}
             />
          </div>
       </div>
