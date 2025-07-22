@@ -188,26 +188,6 @@ export default function ProjectPage({
                               ).toLocaleDateString()}
                            </p>
                         </div>
-                        <div>
-                           <label className="text-sm font-medium">
-                              Created
-                           </label>
-                           <p>
-                              {new Date(
-                                 project.created_at
-                              ).toLocaleDateString()}
-                           </p>
-                        </div>
-                        <div>
-                           <label className="text-sm font-medium">
-                              Last Updated
-                           </label>
-                           <p>
-                              {new Date(
-                                 project.last_updated_at
-                              ).toLocaleDateString()}
-                           </p>
-                        </div>
                      </div>
                   </CardContent>
                </Card>
