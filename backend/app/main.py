@@ -3,13 +3,11 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from .agents import PSAOrchestrator
+from .agents.orchestrator import run as orchestrator_run
 from .config import agent_config, app_config
-
-# Initialize the PSA Orchestrator
-orchestrator = PSAOrchestrator()
 
 app = FastAPI(
     title="PSA Agent Backend",
@@ -88,11 +86,21 @@ async def agent_query(request: AgentQueryRequest):
     """
     General agent query endpoint - orchestrator determines which agents to use
     """
-    try:
-        result = await orchestrator.process_request(request.query, request.context)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Agent query failed: {str(e)}")
+
+    async def generate_stream():
+        try:
+            async for chunk in orchestrator_run(request.query):
+                # Chunks are already filtered by orchestrator
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            # Send error as final chunk
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 @app.post("/api/v1/agent/project-plan")
