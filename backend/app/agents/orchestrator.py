@@ -1,5 +1,6 @@
 from strands import Agent
 
+from .project_management import project_management_agent
 from .quotes import quotes_agent
 
 MAIN_SYSTEM_PROMPT = """
@@ -13,7 +14,7 @@ orchestrator = Agent(
     name="orchestrator",
     system_prompt=MAIN_SYSTEM_PROMPT,
     callback_handler=None,
-    tools=[quotes_agent],
+    tools=[quotes_agent, project_management_agent],
 )
 
 
