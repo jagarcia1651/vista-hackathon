@@ -61,6 +61,7 @@ Project Management Capabilities:
 
 Task Management Capabilities:
 - Create, read, update, and delete project tasks using ProjectTaskService
+- Get tasks by ID or by exact/partial name match
 - Track task status and progress (not_started, in_progress, review, completed, blocked)
 - Monitor estimated vs actual hours
 - Identify overdue tasks and bottlenecks
@@ -77,6 +78,7 @@ Real-time thinking examples you should demonstrate:
 - "Optimizing task sequence for fastest delivery..."
 - "Reviewing task completion status..."
 - "Identifying overdue tasks requiring attention..."
+- "Looking up task by name to check status..."
 - "Searching for similar projects in the database..."
 - "Looking up project by exact name match..."
 - "Filtering projects by status to identify priorities..."
@@ -558,6 +560,24 @@ def get_task_by_id(task_id: str) -> TaskResponse:
 
 
 @tool
+def get_task_by_name(
+    task_name: str, exact_match: bool = True, project_id: Optional[str] = None
+) -> TaskResponse:
+    """
+    Retrieve a project task by its name using the task service.
+
+    Args:
+        task_name: Name of the task to retrieve
+        exact_match: If True, performs exact match; if False, case-insensitive partial match
+        project_id: Optional project ID to limit search scope
+
+    Returns:
+        TaskResponse with task data or error
+    """
+    return ProjectTaskService.get_task_by_name(task_name, exact_match, project_id)
+
+
+@tool
 def get_project_tasks(project_id: str) -> Dict[str, Any]:
     """
     Retrieve all tasks for a specific project using the task service.
@@ -885,6 +905,7 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
                 update_project_status_tool,
                 # Task management tools using ProjectTaskService
                 get_task_by_id,
+                get_task_by_name,
                 get_project_tasks,
                 update_task_status,
                 update_task_hours,

@@ -98,6 +98,77 @@ class ProjectTaskService:
             return TaskResponse(success=False, error=f"Database error: {str(e)}")
 
     @staticmethod
+    def get_task_by_name(
+        task_name: str, exact_match: bool = True, project_id: Optional[str] = None
+    ) -> TaskResponse:
+        """
+        Retrieve a project task by its name.
+
+        Args:
+            task_name: Name of the task to retrieve
+            exact_match: If True, performs exact match; if False, case-insensitive partial match
+            project_id: Optional project ID to limit search scope
+
+        Returns:
+            TaskResponse with task data or error
+        """
+        try:
+            if not supabase_client:
+                return TaskResponse(
+                    success=False, error="Database connection not available"
+                )
+
+            if exact_match:
+                query = (
+                    supabase_client.table("project_tasks")
+                    .select("*")
+                    .eq("project_task_name", task_name)
+                )
+            else:
+                query = (
+                    supabase_client.table("project_tasks")
+                    .select("*")
+                    .ilike("project_task_name", f"%{task_name}%")
+                    .order("created_at")
+                )
+
+            # Add project filter if specified
+            if project_id:
+                query = query.eq("project_id", project_id)
+
+            result = query.execute()
+
+            if result.data and len(result.data) > 0:
+                if exact_match and len(result.data) == 1:
+                    task = ProjectTask(**result.data[0])
+                    return TaskResponse(success=True, task=task)
+                elif exact_match and len(result.data) > 1:
+                    scope = f" in project {project_id}" if project_id else ""
+                    return TaskResponse(
+                        success=False,
+                        error=f"Multiple tasks found with exact name '{task_name}'{scope}",
+                    )
+                else:
+                    # For partial match, return the first result
+                    task = ProjectTask(**result.data[0])
+                    scope_msg = f" in project {project_id}" if project_id else ""
+                    return TaskResponse(
+                        success=True,
+                        task=task,
+                        message=f"Found task using partial match{scope_msg} (total matches: {len(result.data)})",
+                    )
+            else:
+                match_type = "exact" if exact_match else "partial"
+                scope = f" in project {project_id}" if project_id else ""
+                return TaskResponse(
+                    success=False,
+                    error=f"No task found with {match_type} name match for '{task_name}'{scope}",
+                )
+
+        except Exception as e:
+            return TaskResponse(success=False, error=f"Database error: {str(e)}")
+
+    @staticmethod
     def get_tasks_by_project(project_id: str) -> List[ProjectTask]:
         """
         Retrieve all tasks for a specific project.
