@@ -4,6 +4,7 @@ import { EditStafferDetails } from "@/app/staffers/components/EditStafferDetails
 import { EditStafferSkills } from "@/app/staffers/components/EditStafferSkills";
 import { useStaffers } from "@/app/staffers/contexts/StaffersContext";
 import { CreateStafferData } from "@/app/staffers/services/stafferService";
+import { staffersSkillsService } from "@/app/staffers/services/staffersSkillsService";
 import { Modal } from "@/components/shared/Modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,14 @@ export function StafferModal({
 
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState("");
+
+   // Track pending skill changes
+   const [pendingSkillAdditions, setPendingSkillAdditions] = useState<string[]>(
+      []
+   );
+   const [pendingSkillDeletions, setPendingSkillDeletions] = useState<string[]>(
+      []
+   );
 
    const [formData, setFormData] = useState<CreateStafferData>({
       first_name: "",
@@ -71,6 +80,9 @@ export function StafferModal({
             });
          }
          setError("");
+         // Reset pending skill changes when modal opens
+         setPendingSkillAdditions([]);
+         setPendingSkillDeletions([]);
       }
    }, [staffer, isOpen]);
 
@@ -82,6 +94,14 @@ export function StafferModal({
          ...prev,
          [field]: value,
       }));
+   };
+
+   const handleSkillsChange = (
+      pendingAdditions: string[],
+      pendingDeletions: string[]
+   ) => {
+      setPendingSkillAdditions(pendingAdditions);
+      setPendingSkillDeletions(pendingDeletions);
    };
 
    const validateForm = (): boolean => {
@@ -117,6 +137,37 @@ export function StafferModal({
       return true;
    };
 
+   const applySkillChanges = async (stafferId: string) => {
+      const promises = [];
+
+      // Apply skill deletions
+      for (const stafferSkillId of pendingSkillDeletions) {
+         promises.push(
+            staffersSkillsService.deleteStafferSkill(stafferSkillId)
+         );
+      }
+
+      // Apply skill additions
+      for (const skillId of pendingSkillAdditions) {
+         promises.push(
+            staffersSkillsService.createStafferSkill({
+               staffer_id: stafferId,
+               skill_id: skillId,
+               skill_status: "competent", // Default status
+            })
+         );
+      }
+
+      if (promises.length > 0) {
+         try {
+            await Promise.all(promises);
+         } catch (err) {
+            console.error("Error applying skill changes:", err);
+            throw new Error("Failed to update skills");
+         }
+      }
+   };
+
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
 
@@ -136,6 +187,7 @@ export function StafferModal({
          };
 
          let success = false;
+         const stafferId = staffer?.id;
 
          if (staffer?.id) {
             // Update existing staffer
@@ -146,22 +198,42 @@ export function StafferModal({
          } else {
             // Create new staffer
             success = await createStaffer(cleanedData);
+            // Note: For new staffers, we can't apply skills immediately
+            // since we don't have the staffer ID until after creation
+            // This would require a different approach or API design
          }
 
-         if (success) {
+         if (success && stafferId) {
+            // Apply skill changes if there are any
+            if (
+               pendingSkillAdditions.length > 0 ||
+               pendingSkillDeletions.length > 0
+            ) {
+               await applySkillChanges(stafferId);
+            }
+
             onSuccess();
             onClose();
          }
          // If not successful, error will be displayed from context
       } catch (err) {
-         setError("An unexpected error occurred");
+         setError(
+            err instanceof Error ? err.message : "An unexpected error occurred"
+         );
       } finally {
          setLoading(false);
       }
    };
 
+   const handleClose = () => {
+      // Reset pending changes when cancelling
+      setPendingSkillAdditions([]);
+      setPendingSkillDeletions([]);
+      onClose();
+   };
+
    return (
-      <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal isOpen={isOpen} onClose={handleClose}>
          <Card className="max-w-4xl w-full">
             <CardHeader>
                <CardTitle>
@@ -189,13 +261,16 @@ export function StafferModal({
                   />
 
                   {/* Skills Section */}
-                  <EditStafferSkills staffer={staffer} />
+                  <EditStafferSkills
+                     staffer={staffer}
+                     onSkillsChange={handleSkillsChange}
+                  />
 
                   <div className="flex justify-end space-x-4 pt-4">
                      <Button
                         type="button"
                         variant="outline"
-                        onClick={onClose}
+                        onClick={handleClose}
                         disabled={loading}
                      >
                         Cancel
