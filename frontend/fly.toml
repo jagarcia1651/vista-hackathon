@@ -1,23 +1,28 @@
-app = "psa-agent-frontend"
-primary_region = "sjc"
+# fly.toml app configuration file generated for psa-agent-frontend on 2025-07-22T11:58:49-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'psa-agent-frontend'
+primary_region = 'sjc'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
+
+[deploy]
+  release_command = "echo 'Frontend deployment complete'"
 
 [env]
-  PORT = "3000"
+  PORT = '3000'
 
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
 [[vm]]
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 512
-
-[deploy]
-  release_command = "echo 'Frontend deployment complete'" 
