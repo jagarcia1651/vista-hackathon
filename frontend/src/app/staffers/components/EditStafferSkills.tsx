@@ -16,13 +16,21 @@ interface EditStafferSkillsProps {
    onSkillsChange?: (
       pendingAdditions: string[],
       pendingDeletions: string[],
-      pendingUpdates: PendingSkillUpdate[]
+      pendingUpdates: PendingSkillUpdate[],
+      pendingSkillDetails: PendingSkillDetails[]
    ) => void;
 }
 
 interface PendingSkillUpdate {
    staffer_skill_id: string;
    skill_status?: string;
+   certification_active_date?: string;
+   certification_expiry_date?: string;
+}
+
+interface PendingSkillDetails {
+   skill_id: string;
+   skill_status: string;
    certification_active_date?: string;
    certification_expiry_date?: string;
 }
@@ -50,6 +58,9 @@ export function EditStafferSkills({
    const [pendingUpdates, setPendingUpdates] = useState<PendingSkillUpdate[]>(
       []
    );
+   const [pendingSkillDetails, setPendingSkillDetails] = useState<
+      PendingSkillDetails[]
+   >([]);
 
    // Load all skills on mount and create lookup map
    useEffect(() => {
@@ -73,6 +84,7 @@ export function EditStafferSkills({
       setPendingAdditions([]);
       setPendingDeletions([]);
       setPendingUpdates([]);
+      setPendingSkillDetails([]);
       setExpandedSkills(new Set());
 
       if (staffer?.id) {
@@ -93,8 +105,19 @@ export function EditStafferSkills({
 
    // Notify parent of pending changes
    useEffect(() => {
-      onSkillsChange?.(pendingAdditions, pendingDeletions, pendingUpdates);
-   }, [pendingAdditions, pendingDeletions, pendingUpdates, onSkillsChange]);
+      onSkillsChange?.(
+         pendingAdditions,
+         pendingDeletions,
+         pendingUpdates,
+         pendingSkillDetails
+      );
+   }, [
+      pendingAdditions,
+      pendingDeletions,
+      pendingUpdates,
+      pendingSkillDetails,
+      onSkillsChange,
+   ]);
 
    // Filter skills based on search query and exclude already assigned/pending skills
    useEffect(() => {
@@ -159,6 +182,18 @@ export function EditStafferSkills({
 
       // Add to pending additions for immediate visual feedback
       setPendingAdditions((prev) => [...prev, skill.skill_id]);
+
+      // Initialize pending skill details with default values
+      setPendingSkillDetails((prev) => [
+         ...prev,
+         {
+            skill_id: skill.skill_id,
+            skill_status: "competent",
+            certification_active_date: "",
+            certification_expiry_date: "",
+         },
+      ]);
+
       setSkillSearchQuery("");
       setShowSkillDropdown(false);
    };
@@ -179,6 +214,16 @@ export function EditStafferSkills({
    const handleRemovePendingSkill = (skillId: string) => {
       // Remove from pending additions
       setPendingAdditions((prev) => prev.filter((id) => id !== skillId));
+      // Remove from pending skill details
+      setPendingSkillDetails((prev) =>
+         prev.filter((detail) => detail.skill_id !== skillId)
+      );
+      // Remove from expanded if it was expanded
+      setExpandedSkills((prev) => {
+         const newSet = new Set(prev);
+         newSet.delete(`pending-${skillId}`);
+         return newSet;
+      });
    };
 
    const handleSearchFocus = () => {
@@ -227,6 +272,18 @@ export function EditStafferSkills({
       });
    };
 
+   const handlePendingSkillUpdate = (
+      skillId: string,
+      field: string,
+      value: string
+   ) => {
+      setPendingSkillDetails((prev) => {
+         return prev.map((detail) =>
+            detail.skill_id === skillId ? { ...detail, [field]: value } : detail
+         );
+      });
+   };
+
    const getPendingUpdateValue = (
       stafferSkillId: string,
       field: string,
@@ -239,6 +296,15 @@ export function EditStafferSkills({
          (pendingUpdate?.[field as keyof PendingSkillUpdate] as string) ||
          originalValue ||
          ""
+      );
+   };
+
+   const getPendingSkillValue = (skillId: string, field: string): string => {
+      const pendingDetail = pendingSkillDetails.find(
+         (detail) => detail.skill_id === skillId
+      );
+      return (
+         (pendingDetail?.[field as keyof PendingSkillDetails] as string) || ""
       );
    };
 
@@ -493,14 +559,28 @@ export function EditStafferSkills({
                {/* Pending additions */}
                {pendingAdditions.map((skillId) => {
                   const skill = skillsLookup[skillId];
+                  const pendingId = `pending-${skillId}`;
+                  const isExpanded = expandedSkills.has(pendingId);
+
                   return (
                      <div
-                        key={`pending-${skillId}`}
+                        key={pendingId}
                         className="border-2 border-dashed border-green-300 rounded-lg bg-green-50"
                      >
+                        {/* Accordion Header */}
                         <div className="flex items-center justify-between p-4">
                            <div className="flex items-center gap-3 flex-1">
-                              <ChevronRight className="w-5 h-5 text-slate-400" />
+                              <button
+                                 type="button"
+                                 onClick={() => toggleSkillExpansion(pendingId)}
+                                 className="text-slate-400 hover:text-slate-600"
+                              >
+                                 {isExpanded ? (
+                                    <ChevronDown className="w-5 h-5" />
+                                 ) : (
+                                    <ChevronRight className="w-5 h-5" />
+                                 )}
+                              </button>
 
                               <div className="flex-1">
                                  <div className="flex items-center gap-2">
@@ -516,8 +596,11 @@ export function EditStafferSkills({
                                        pending
                                     </span>
                                  </div>
-                                 <div className="text-sm text-green-700">
-                                    competent
+                                 <div className="text-sm text-green-700 capitalize">
+                                    {getPendingSkillValue(
+                                       skillId,
+                                       "skill_status"
+                                    ) || "competent"}
                                  </div>
                               </div>
                            </div>
@@ -530,6 +613,105 @@ export function EditStafferSkills({
                               <X className="w-4 h-4" />
                            </button>
                         </div>
+
+                        {/* Accordion Content for Pending Skills */}
+                        {isExpanded && (
+                           <div className="px-4 pb-4 border-t border-green-200">
+                              <div className="space-y-4 pt-4">
+                                 {/* Skill Description */}
+                                 <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                       Description
+                                    </label>
+                                    <p className="text-sm text-slate-600 mt-1">
+                                       {skill?.skill_description ||
+                                          "No description available"}
+                                    </p>
+                                 </div>
+
+                                 {/* Skill Status */}
+                                 <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                       Skill Level
+                                    </label>
+                                    <select
+                                       value={
+                                          getPendingSkillValue(
+                                             skillId,
+                                             "skill_status"
+                                          ) || "competent"
+                                       }
+                                       onChange={(e) =>
+                                          handlePendingSkillUpdate(
+                                             skillId,
+                                             "skill_status",
+                                             e.target.value
+                                          )
+                                       }
+                                       className="mt-1 block w-full p-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                       <option value="learning">
+                                          Learning
+                                       </option>
+                                       <option value="competent">
+                                          Competent
+                                       </option>
+                                       <option value="expert">Expert</option>
+                                       <option value="certified">
+                                          Certified
+                                       </option>
+                                    </select>
+                                 </div>
+
+                                 {/* Certification Dates (only if it's a certification) */}
+                                 {skill?.is_certification && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                             Certification Active Date
+                                          </label>
+                                          <Input
+                                             type="date"
+                                             value={getPendingSkillValue(
+                                                skillId,
+                                                "certification_active_date"
+                                             )}
+                                             onChange={(e) =>
+                                                handlePendingSkillUpdate(
+                                                   skillId,
+                                                   "certification_active_date",
+                                                   e.target.value
+                                                )
+                                             }
+                                             className="mt-1"
+                                          />
+                                       </div>
+
+                                       <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                             Certification Expiry Date
+                                          </label>
+                                          <Input
+                                             type="date"
+                                             value={getPendingSkillValue(
+                                                skillId,
+                                                "certification_expiry_date"
+                                             )}
+                                             onChange={(e) =>
+                                                handlePendingSkillUpdate(
+                                                   skillId,
+                                                   "certification_expiry_date",
+                                                   e.target.value
+                                                )
+                                             }
+                                             className="mt-1"
+                                          />
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                        )}
                      </div>
                   );
                })}

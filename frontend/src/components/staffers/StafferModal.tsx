@@ -24,6 +24,13 @@ interface PendingSkillUpdate {
    certification_expiry_date?: string;
 }
 
+interface PendingSkillDetails {
+   skill_id: string;
+   skill_status: string;
+   certification_active_date?: string;
+   certification_expiry_date?: string;
+}
+
 interface StafferModalProps {
    isOpen: boolean;
    onClose: () => void;
@@ -51,6 +58,9 @@ export function StafferModal({
    );
    const [pendingSkillUpdates, setPendingSkillUpdates] = useState<
       PendingSkillUpdate[]
+   >([]);
+   const [pendingSkillDetails, setPendingSkillDetails] = useState<
+      PendingSkillDetails[]
    >([]);
 
    const [formData, setFormData] = useState<CreateStafferData>({
@@ -94,6 +104,7 @@ export function StafferModal({
          setPendingSkillAdditions([]);
          setPendingSkillDeletions([]);
          setPendingSkillUpdates([]);
+         setPendingSkillDetails([]);
       }
    }, [staffer, isOpen]);
 
@@ -110,11 +121,13 @@ export function StafferModal({
    const handleSkillsChange = (
       pendingAdditions: string[],
       pendingDeletions: string[],
-      pendingUpdates: PendingSkillUpdate[]
+      pendingUpdates: PendingSkillUpdate[],
+      pendingDetails: PendingSkillDetails[]
    ) => {
       setPendingSkillAdditions(pendingAdditions);
       setPendingSkillDeletions(pendingDeletions);
       setPendingSkillUpdates(pendingUpdates);
+      setPendingSkillDetails(pendingDetails);
    };
 
    const validateForm = (): boolean => {
@@ -166,13 +179,21 @@ export function StafferModal({
          promises.push(staffersSkillsService.updateStafferSkill(updateData));
       }
 
-      // Apply skill additions
+      // Apply skill additions with detailed information
       for (const skillId of pendingSkillAdditions) {
+         const skillDetails = pendingSkillDetails.find(
+            (detail) => detail.skill_id === skillId
+         );
+
          promises.push(
             staffersSkillsService.createStafferSkill({
                staffer_id: stafferId,
                skill_id: skillId,
-               skill_status: "competent", // Default status
+               skill_status: skillDetails?.skill_status || "competent",
+               certification_active_date:
+                  skillDetails?.certification_active_date || undefined,
+               certification_expiry_date:
+                  skillDetails?.certification_expiry_date || undefined,
             })
          );
       }
@@ -251,6 +272,7 @@ export function StafferModal({
       setPendingSkillAdditions([]);
       setPendingSkillDeletions([]);
       setPendingSkillUpdates([]);
+      setPendingSkillDetails([]);
       onClose();
    };
 
