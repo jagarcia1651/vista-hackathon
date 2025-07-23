@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 export function Navigation() {
    const { user, loading, signOut } = useAuth();
@@ -39,32 +40,6 @@ export function Navigation() {
       return () =>
          document.removeEventListener("mousedown", handleClickOutside);
    }, []);
-
-   if (loading) {
-      return (
-         <>
-            {/* Mobile header */}
-            <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-sidebar border-b border-sidebar-border z-50">
-               <div className="flex items-center justify-between h-full px-4">
-                  <h1 className="text-xl font-semibold text-sidebar-foreground">
-                     ProjectAI
-                  </h1>
-               </div>
-            </header>
-
-            {/* Desktop sidebar */}
-            <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border">
-               <div className="flex flex-col h-full">
-                  <div className="p-6">
-                     <h1 className="text-xl font-semibold text-sidebar-foreground">
-                        ProjectAI
-                     </h1>
-                  </div>
-               </div>
-            </aside>
-         </>
-      );
-   }
 
    const navigation = [
       { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -175,13 +150,16 @@ export function Navigation() {
          {/* Mobile Header */}
          <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-sidebar border-b border-sidebar-border z-50">
             <div className="flex items-center justify-between h-full px-4">
-               <Link
-                  href="/"
-                  className="text-xl font-semibold text-sidebar-foreground hover:text-sidebar-primary transition-colors"
-               >
-                  ProjectAI
+               <Link href="/" className="flex items-center">
+                  <Image
+                     src="/intelagentpsa_logo.png"
+                     alt="Intelagent PSA"
+                     width={140}
+                     height={32}
+                     priority
+                  />
                </Link>
-               {user && (
+               {!loading && user && (
                   <Button
                      variant="outline"
                      size="sm"
@@ -207,42 +185,47 @@ export function Navigation() {
          )}
 
          {/* Mobile Menu */}
-         <aside
-            className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border z-50 transform transition-transform duration-200 ease-in-out ${
-               isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-         >
-            <div className="flex flex-col h-full">
-               {user && (
-                  <nav className="flex-1 px-4 py-6">
-                     <NavItems />
-                  </nav>
-               )}
-               <UserSection />
-            </div>
-         </aside>
+         {!loading && (
+            <aside
+               className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border z-50 transform transition-transform duration-200 ease-in-out ${
+                  isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+               }`}
+            >
+               <div className="flex flex-col h-full">
+                  {user && (
+                     <nav className="flex-1 px-4 py-6">
+                        <NavItems />
+                     </nav>
+                  )}
+                  <UserSection />
+               </div>
+            </aside>
+         )}
 
          {/* Desktop Sidebar */}
          <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border">
             <div className="flex flex-col h-full">
                {/* Header */}
-               <div className="p-6 border-b border-sidebar-border">
-                  <Link
-                     href="/"
-                     className="text-xl font-semibold text-sidebar-foreground hover:text-sidebar-primary transition-colors"
-                  >
-                     ProjectAI
+               <div className="p-4 border-b border-sidebar-border">
+                  <Link href="/" className="flex items-center">
+                     <Image
+                        src="/intelagentpsa_logo.png"
+                        alt="Intelagent PSA"
+                        width={180}
+                        height={70}
+                        priority
+                     />
                   </Link>
                </div>
 
                {/* Navigation */}
-               {user && (
+               {!loading && user && (
                   <nav className="flex-1 px-4 py-6">
                      <NavItems />
                   </nav>
                )}
 
-               <UserSection />
+               {!loading && <UserSection />}
             </div>
          </aside>
       </>
