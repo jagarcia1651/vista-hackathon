@@ -83,7 +83,51 @@ class StafferTimeOffService {
             );
          }
 
-         return { data: data as StafferTimeOff, error: null };
+         // If creation was successful, notify the backend orchestrator
+         const createdTimeOff = data as StafferTimeOff;
+         if (createdTimeOff) {
+            try {
+               const payload = {
+                  time_off_id: createdTimeOff.time_off_id,
+                  staffer_id: createdTimeOff.staffer_id,
+                  time_off_start_datetime:
+                     createdTimeOff.time_off_start_datetime,
+                  time_off_end_datetime: createdTimeOff.time_off_end_datetime,
+                  time_off_cumulative_hours:
+                     createdTimeOff.time_off_cumulative_hours,
+                  created_at: createdTimeOff.created_at,
+                  last_updated_at: createdTimeOff.last_updated_at,
+               };
+
+               // Call the backend endpoint to trigger orchestrator
+               const response = await fetch("/api/v1/agent/time-off-created", {
+                  method: "POST",
+                  headers: {
+                     "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(payload),
+               });
+
+               if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error(
+                     "Backend response error:",
+                     response.status,
+                     errorText
+                  );
+               } else {
+                  console.log("Successfully notified backend orchestrator");
+               }
+            } catch (notificationError) {
+               // Log the error but don't fail the time off creation
+               console.warn(
+                  "Failed to notify orchestrator about time off creation:",
+                  notificationError
+               );
+            }
+         }
+
+         return { data: createdTimeOff, error: null };
       } catch (error) {
          return {
             data: null,

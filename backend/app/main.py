@@ -65,6 +65,16 @@ class CapacityAnalysisRequest(BaseModel):
     time_range: Dict[str, str]
 
 
+class StafferTimeOffRequest(BaseModel):
+    time_off_id: str
+    staffer_id: str
+    time_off_start_datetime: str
+    time_off_end_datetime: str
+    time_off_cumulative_hours: float
+    created_at: Optional[str] = None
+    last_updated_at: Optional[str] = None
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint with agent status"""
@@ -96,6 +106,7 @@ async def root():
             "project_analyze": "/api/v1/project-management/analyze/{project_id}",
             "quote": "/api/v1/agent/quote",
             "capacity": "/api/v1/agent/capacity-analysis",
+            "time_off_created": "/api/v1/agent/time-off-created",
         },
     }
 
@@ -221,6 +232,45 @@ async def capacity_analysis(request: CapacityAnalysisRequest):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Capacity analysis failed: {str(e)}"
+        )
+
+
+@app.post("/api/v1/agent/time-off-created-debug")
+async def time_off_created_debug(request: Dict[str, Any]):
+    """
+    Debug endpoint to see raw request data
+    """
+    print(f"DEBUG - Raw request data: {request}")
+    print(f"DEBUG - Request type: {type(request)}")
+    for key, value in request.items():
+        print(f"DEBUG - {key}: {value} (type: {type(value)})")
+    return {"received": request}
+
+
+@app.post("/api/v1/agent/time-off-created")
+async def time_off_created(request: StafferTimeOffRequest):
+    """
+    Handle time off creation events and trigger orchestrator agent
+    """
+    try:
+        print(f"Received time off request: {request}")
+        print(f"Request dict: {request.dict()}")
+
+        # Create a test message for the orchestrator about the time off creation
+        query = f"Time off has been created for staffer {request.staffer_id} from {request.time_off_start_datetime} to {request.time_off_end_datetime} with {request.time_off_cumulative_hours} hours. Please analyze potential impact on project schedules and resource allocation."
+
+        # Trigger orchestrator agent with the time off information
+        asyncio.create_task(orchestrator_run(query))
+
+        return {
+            "status": "processing",
+            "message": "Time off creation event received and sent to orchestrator",
+            "time_off_id": request.time_off_id,
+        }
+    except Exception as e:
+        print(f"Error in time_off_created endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Time off event processing failed: {str(e)}"
         )
 
 
