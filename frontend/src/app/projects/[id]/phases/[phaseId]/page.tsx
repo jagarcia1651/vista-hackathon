@@ -4,7 +4,14 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, CheckCircle2, Circle, Plus } from "lucide-react";
+import {
+   ArrowLeft,
+   Users,
+   CheckCircle2,
+   Circle,
+   Plus,
+   Edit
+} from "lucide-react";
 import type { ProjectPhaseWithTasks, ProjectTask } from "@/types/project";
 import type { Staffer } from "@/types/staffer";
 import { phaseService } from "@/app/projects/services/phaseService";
@@ -12,6 +19,7 @@ import { taskService } from "@/app/projects/services/taskService";
 import { teamService } from "@/app/projects/services/teamService";
 import { TasksGrid } from "@/app/projects/components/TasksGrid";
 import { TaskModal } from "@/app/projects/components/TaskModal";
+import { PhaseModal } from "@/app/projects/components/PhaseModal";
 import { TaskStatus } from "@/types/base";
 
 type PageParams = {
@@ -30,6 +38,7 @@ export default function PhaseDetailPage({
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+   const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
    const [selectedTask, setSelectedTask] = useState<ProjectTask | undefined>();
 
    const fetchPhaseDetails = async () => {
@@ -50,7 +59,8 @@ export default function PhaseDetailPage({
          // Fetch team members for this phase
          const { data: teamData, error: teamError } =
             await teamService.getTeamByPhase(unwrappedParams.phaseId);
-         if (teamError) throw new Error(String(teamError));
+
+         // Extract staffers from team data if it exists
          const teamMembers =
             teamData?.project_team_memberships
                ?.map((membership: { staffer: Staffer }) => membership.staffer)
@@ -134,6 +144,15 @@ export default function PhaseDetailPage({
       }
    };
 
+   const handleEditPhase = () => {
+      setIsPhaseModalOpen(true);
+   };
+
+   const handlePhaseSave = async () => {
+      setIsPhaseModalOpen(false);
+      await fetchPhaseDetails(); // Refresh the phase data
+   };
+
    if (loading) {
       return <div>Loading...</div>;
    }
@@ -190,7 +209,11 @@ export default function PhaseDetailPage({
                   {phase.project_phase_description}
                </p>
             </div>
-            <div className="text-right">
+            <div className="flex flex-col items-end gap-2">
+               <Button variant="outline" onClick={handleEditPhase}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Phase
+               </Button>
                <div className="text-sm text-gray-600">
                   {new Date(
                      phase.project_phase_start_date
@@ -198,7 +221,7 @@ export default function PhaseDetailPage({
                   -{" "}
                   {new Date(phase.project_phase_due_date).toLocaleDateString()}
                </div>
-               <div className="mt-2">
+               <div>
                   <span
                      className={`px-3 py-1 rounded-full text-sm font-medium ${
                         phase.project_phase_status === "completed"
@@ -349,6 +372,15 @@ export default function PhaseDetailPage({
             onSuccess={handleTaskSave}
             task={selectedTask}
             projectId={unwrappedParams.id}
+         />
+
+         {/* Phase Modal */}
+         <PhaseModal
+            projectId={unwrappedParams.id}
+            phase={phase}
+            isOpen={isPhaseModalOpen}
+            onClose={() => setIsPhaseModalOpen(false)}
+            onSuccess={handlePhaseSave}
          />
       </div>
    );
