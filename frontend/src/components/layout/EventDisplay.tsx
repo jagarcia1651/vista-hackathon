@@ -1,5 +1,11 @@
 import { UIEvent, BusinessEvent, AgentType } from "@/types/events";
-import { ClipboardList, Users, DollarSign } from "lucide-react";
+import {
+   ClipboardList,
+   Users,
+   DollarSign,
+   Brain,
+   AlertCircle
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formatTimestamp = (isoTimestamp: string) => {
@@ -28,6 +34,15 @@ const formatTimestamp = (isoTimestamp: string) => {
 
 const getAgentConfig = (agentId: AgentType) => {
    switch (agentId) {
+      case "ORCHESTRATOR":
+         return {
+            icon: Brain,
+            bgColor: "bg-purple-50",
+            borderColor: "border-purple-200",
+            textColor: "text-purple-700",
+            iconColor: "text-purple-500",
+            displayName: "Orchestrator"
+         };
       case "PROJECT":
          return {
             icon: ClipboardList,
@@ -72,40 +87,56 @@ const isBusinessEvent = (event: UIEvent): event is BusinessEvent => {
 };
 
 export const EventDisplay = ({ event }: { event: UIEvent }) => {
-   if (!isBusinessEvent(event)) return null; // Only display business events
+   if (!isBusinessEvent(event)) return null;
 
    const config = getAgentConfig(event.agent_id);
    const Icon = config.icon;
+
+   // Add error styling if it's an error event
+   const isError = event.type === "ERROR";
+   const styles = isError
+      ? {
+           bgColor: "bg-red-50",
+           borderColor: "border-red-200",
+           textColor: "text-red-700",
+           iconColor: "text-red-500"
+        }
+      : config;
 
    return (
       <div
          className={cn(
             "flex items-start space-x-3 rounded-lg p-3",
-            config.bgColor,
-            config.borderColor,
-            "border"
+            styles.bgColor,
+            styles.borderColor,
+            "border",
+            isError && "animate-pulse"
          )}
       >
          <div
             className={cn(
                "p-2 rounded-full",
-               config.bgColor,
-               config.borderColor,
+               styles.bgColor,
+               styles.borderColor,
                "border"
             )}
          >
-            <Icon className={cn("h-4 w-4", config.iconColor)} />
+            {isError ? (
+               <AlertCircle className={cn("h-4 w-4", styles.iconColor)} />
+            ) : (
+               <Icon className={cn("h-4 w-4", styles.iconColor)} />
+            )}
          </div>
          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-               <div className={cn("text-sm font-bold", config.textColor)}>
-                  {config.displayName}
+               <div className={cn("text-sm font-bold", styles.textColor)}>
+                  {isError ? "Error" : config.displayName}
                </div>
                <div className="text-xs text-slate-500 ml-4">
                   {formatTimestamp(event.timestamp)}
                </div>
             </div>
-            <div className={cn("text-sm break-words", config.textColor)}>
+            <div className={cn("text-sm break-words", styles.textColor)}>
                {event.message}
             </div>
          </div>

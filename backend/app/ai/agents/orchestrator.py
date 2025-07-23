@@ -59,15 +59,6 @@ async def run(query: str):
         str: The orchestrator's response to the query
     """
     try:
-        # Emit start event
-        await event_bus.emit(
-            BusinessEvent(
-                type=BusinessEventType.TEST,
-                message=f"Starting to process query: {query[:50]}...",
-                agent_id=AgentType.PROJECT,
-            )
-        )
-
         # Run the orchestrator agent with streaming
         result = Runner.run_streamed(starting_agent=orchestrator, input=query)
 
@@ -92,7 +83,7 @@ async def run(query: str):
                     BusinessEvent(
                         type=BusinessEventType.TEST,
                         message=f"Agent handoff: Now using {agent_name}",
-                        agent_id=AgentType.PROJECT,
+                        agent_id=AgentType.ORCHESTRATOR,
                     )
                 )
 
@@ -111,13 +102,13 @@ async def run(query: str):
                     print(f"🔧 Tool Called: {tool_name}")
                     print(f"   Arguments: {tool_args}")
 
-                    await event_bus.emit(
-                        BusinessEvent(
-                            type=BusinessEventType.TEST,
-                            message=f"Tool called: {tool_name} with args: {tool_args}",
-                            agent_id=AgentType.PROJECT,
-                        )
-                    )
+                    # await event_bus.emit(
+                    #     BusinessEvent(
+                    #         type=BusinessEventType.TEST,
+                    #         message=f"Tool called: {tool_name} with args: {tool_args}",
+                    #         agent_id=AgentType.PROJECT,
+                    #     )
+                    # )
 
                 elif event.item.type == "tool_call_output_item":
                     tool_output = (
@@ -128,13 +119,13 @@ async def run(query: str):
 
                     print(f"✅ Tool Output: {tool_output}...")
 
-                    await event_bus.emit(
-                        BusinessEvent(
-                            type=BusinessEventType.TEST,
-                            message=f"Tool output received: {tool_output}...",
-                            agent_id=AgentType.PROJECT,
-                        )
-                    )
+                    # await event_bus.emit(
+                    #     BusinessEvent(
+                    #         type=BusinessEventType.TEST,
+                    #         message=f"Tool output received: {tool_output}...",
+                    #         agent_id=AgentType.PROJECT,
+                    #     )
+                    # )
 
                 elif event.item.type == "message_output_item":
                     message_text = ItemHelpers.text_message_output(event.item)
@@ -144,14 +135,6 @@ async def run(query: str):
 
                     # Store the final result
                     final_result = message_text
-
-                    await event_bus.emit(
-                        BusinessEvent(
-                            type=BusinessEventType.TEST,
-                            message=f"Agent response: {message_text[:200]}...",
-                            agent_id=AgentType.PROJECT,
-                        )
-                    )
 
                 else:
                     print(f"📝 Other item type: {event.item.type}")
@@ -167,7 +150,7 @@ async def run(query: str):
             BusinessEvent(
                 type=BusinessEventType.TEST,
                 message=f"Query processed successfully: {str(final_result)[:200]}...",
-                agent_id=AgentType.PROJECT,
+                agent_id=AgentType.ORCHESTRATOR,
             )
         )
 
@@ -180,9 +163,9 @@ async def run(query: str):
         # Emit error event
         await event_bus.emit(
             BusinessEvent(
-                type=BusinessEventType.TEST,
+                type=BusinessEventType.ERROR,
                 message=f"Error processing query: {str(e)}",
-                agent_id=AgentType.PROJECT,
+                agent_id=AgentType.ORCHESTRATOR,
             )
         )
         # Re-raise the exception so the caller can handle it
