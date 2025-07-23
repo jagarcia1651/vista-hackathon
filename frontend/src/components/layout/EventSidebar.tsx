@@ -16,14 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Send, MessageCircle } from "lucide-react";
 import { EventDisplay } from "./EventDisplay";
 import { cn } from "@/lib/utils";
-
-interface Message {
-   id: string;
-   content: string;
-   role: "user" | "assistant";
-   timestamp: Date;
-   status?: "sending" | "success" | "error";
-}
+import { UIEvent } from "@/types/events";
 
 interface ChatResponse {
    response: string;
@@ -33,10 +26,15 @@ interface ChatResponse {
 }
 
 export const EventSidebar = () => {
-   const { events, backendStatus, isOpen, toggleSidebar, unreadCount } =
-      useEventStream();
+   const {
+      events,
+      backendStatus,
+      isOpen,
+      toggleSidebar,
+      unreadCount,
+      handleChatMessage
+   } = useEventStream();
    const [inputValue, setInputValue] = useState("");
-   const [messages, setMessages] = useState<Message[]>([]);
    const [isLoading, setIsLoading] = useState(false);
    const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -46,46 +44,31 @@ export const EventSidebar = () => {
 
    useEffect(() => {
       scrollToBottom();
-   }, [messages, events]);
+   }, [events]);
 
    // Initialize welcome message
    useEffect(() => {
-      if (messages.length === 0) {
-         setMessages([
-            {
-               id: "1",
-               content:
-                  "Hello! I'm your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?",
-               role: "assistant",
-               timestamp: new Date()
-            }
-         ]);
+      if (events.length === 0) {
+         handleChatMessage(
+            "Hello! I'm your PSA Agent assistant. I can help you with project management, resource allocation, and quote generation. What can I help you with today?",
+            "assistant"
+         );
       }
    }, []);
 
    const sendMessage = async () => {
       if (!inputValue.trim() || isLoading) return;
 
-      const userMessage: Message = {
-         id: Date.now().toString(),
-         content: inputValue.trim(),
-         role: "user",
-         timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, userMessage]);
+      // Send user message
+      await handleChatMessage(inputValue.trim(), "user");
       setInputValue("");
       setIsLoading(true);
 
       // Add loading message
-      const loadingMessage: Message = {
-         id: (Date.now() + 1).toString(),
-         content: "Analyzing your request with our specialist agents...",
-         role: "assistant",
-         timestamp: new Date(),
-         status: "sending"
-      };
-      setMessages(prev => [...prev, loadingMessage]);
+      await handleChatMessage(
+         "Analyzing your request with our specialist agents...",
+         "assistant"
+      );
 
       try {
          const response = await fetch("/api/v1/agent/query", {
@@ -94,7 +77,7 @@ export const EventSidebar = () => {
                "Content-Type": "application/json"
             },
             body: JSON.stringify({
-               query: userMessage.content,
+               query: inputValue.trim(),
                context: {
                   session_id: "dashboard-chat",
                   user_interface: "web"
@@ -108,40 +91,17 @@ export const EventSidebar = () => {
 
          const data: ChatResponse = await response.json();
 
-         // Remove loading message and add actual response
-         setMessages(prev => {
-            const filtered = prev.filter(msg => msg.id !== loadingMessage.id);
-            return [
-               ...filtered,
-               {
-                  id: (Date.now() + 2).toString(),
-                  content:
-                     data.response ||
-                     data.error ||
-                     "Sorry, I encountered an error processing your request.",
-                  role: "assistant",
-                  timestamp: new Date(),
-                  status: data.status === "success" ? "success" : "error"
-               }
-            ];
-         });
+         // Remove loading message (this will be handled by the backend event stream)
+         // Add actual response
+         await handleChatMessage(
+            data.response ||
+               data.error ||
+               "Sorry, I encountered an error processing your request.",
+            "assistant"
+         );
       } catch (error) {
          console.error("Chat error:", error);
-
-         // Remove loading message and add error response
-         setMessages(prev => {
-            const filtered = prev.filter(msg => msg.id !== loadingMessage.id);
-            return [
-               ...filtered,
-               {
-                  id: (Date.now() + 3).toString(),
-                  content: getErrorMessage(error),
-                  role: "assistant",
-                  timestamp: new Date(),
-                  status: "error"
-               }
-            ];
-         });
+         await handleChatMessage(getErrorMessage(error), "assistant");
       } finally {
          setIsLoading(false);
       }
@@ -232,47 +192,43 @@ export const EventSidebar = () => {
 
             <ScrollArea className="flex-1">
                <div className="p-4 space-y-4">
-                  {/* Events */}
-                  {events.map((event, i) => (
-                     <EventDisplay key={`event-${i}`} event={event} />
-                  ))}
-
-                  {/* Chat Messages */}
-                  {messages.map(message => (
-                     <div
-                        key={message.id}
-                        className={`flex ${
-                           message.role === "user"
-                              ? "justify-end"
-                              : "justify-start"
-                        }`}
-                     >
+                  {events.map((event, i) =>
+                     event.type === "chat" ? (
                         <div
-                           className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                              message.role === "user"
-                                 ? "bg-blue-600 text-white"
-                                 : message.status === "error"
-                                 ? "bg-red-50 text-red-900 border border-red-200"
-                                 : message.status === "sending"
-                                 ? "bg-slate-100 text-slate-600 animate-pulse"
-                                 : "bg-slate-100 text-slate-900"
+                           key={`chat-${i}`}
+                           className={`flex ${
+                              event.role === "user"
+                                 ? "justify-end"
+                                 : "justify-start"
                            }`}
                         >
-                           <div className="text-sm whitespace-pre-wrap">
-                              {message.content}
-                           </div>
                            <div
-                              className={`text-xs mt-1 ${
-                                 message.role === "user"
-                                    ? "text-blue-100"
-                                    : "text-slate-500"
+                              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                 event.role === "user"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-100 text-slate-900"
                               }`}
                            >
-                              {message.timestamp.toLocaleTimeString()}
+                              <div className="text-sm whitespace-pre-wrap">
+                                 {event.content}
+                              </div>
+                              <div
+                                 className={`text-xs mt-1 ${
+                                    event.role === "user"
+                                       ? "text-blue-100"
+                                       : "text-slate-500"
+                                 }`}
+                              >
+                                 {new Date(
+                                    event.timestamp
+                                 ).toLocaleTimeString()}
+                              </div>
                            </div>
                         </div>
-                     </div>
-                  ))}
+                     ) : (
+                        <EventDisplay key={`event-${i}`} event={event} />
+                     )
+                  )}
                   <div ref={messagesEndRef} />
                </div>
             </ScrollArea>
