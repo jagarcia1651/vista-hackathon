@@ -60,14 +60,16 @@ function getInitialFormData(
          project_task_start_date: formatDateForInput(
             task.project_task_start_date
          ),
-         project_task_due_date: formatDateForInput(task.project_task_due_date)
+         project_task_due_date: formatDateForInput(task.project_task_due_date),
+         estimated_hours: task.estimated_hours || 0,
+         actual_hours: task.actual_hours || 0
       };
    }
    return {
       project_id: projectId,
       project_task_name: "",
       project_task_description: "",
-      project_task_status: "not_started",
+      project_task_status: TaskStatus.TODO,
       project_task_start_date: formatDateForInput(new Date().toISOString()),
       project_task_due_date: formatDateForInput(
          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -208,20 +210,8 @@ export function TaskModal({
             if (result.error) throw new Error(result.error);
             onSuccess(result.data as ProjectTask);
          } else {
-            // Create new task
-            const result = await taskService.createTask({
-               project_id: projectId,
-               project_task_name: formData.project_task_name!,
-               project_task_description: formData.project_task_description!,
-               project_task_status: formData.project_task_status!,
-               project_task_start_date: formData.project_task_start_date!,
-               project_task_due_date: formData.project_task_due_date!,
-               estimated_hours: formData.estimated_hours!,
-               actual_hours: formData.actual_hours
-            });
-
-            if (result.error) throw new Error(result.error);
-            onSuccess(result.data as ProjectTask);
+            // For new tasks, just pass the form data to parent
+            onSuccess(formData as ProjectTask);
          }
 
          onClose();
@@ -354,12 +344,13 @@ export function TaskModal({
                            <Input
                               type="number"
                               min="0"
-                              step="0.5"
+                              step="1"
                               value={formData.estimated_hours || 0}
                               onChange={e =>
                                  setFormData({
                                     ...formData,
-                                    estimated_hours: parseFloat(e.target.value)
+                                    estimated_hours:
+                                       parseInt(e.target.value, 10) || 0
                                  })
                               }
                               required
@@ -373,12 +364,13 @@ export function TaskModal({
                            <Input
                               type="number"
                               min="0"
-                              step="0.5"
+                              step="1"
                               value={formData.actual_hours || 0}
                               onChange={e =>
                                  setFormData({
                                     ...formData,
-                                    actual_hours: parseFloat(e.target.value)
+                                    actual_hours:
+                                       parseInt(e.target.value, 10) || 0
                                  })
                               }
                            />
