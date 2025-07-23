@@ -211,23 +211,66 @@ def get_staffer_task_assignments(
                 # If task has no dates, assume it might be affected
                 overlaps = True
                 if task_start and task_due:
-                    # Simple overlap check - could be made more sophisticated
-                    task_start_dt = datetime.fromisoformat(
-                        task_start.replace("Z", "+00:00")
-                    )
-                    task_due_dt = datetime.fromisoformat(
-                        task_due.replace("Z", "+00:00")
-                    )
-                    timeoff_start_dt = datetime.fromisoformat(
-                        start_date.replace("Z", "+00:00")
-                    )
-                    timeoff_end_dt = datetime.fromisoformat(
-                        end_date.replace("Z", "+00:00")
-                    )
+                    try:
+                        # Parse dates - database should now return proper date objects or ISO strings
+                        from datetime import date
 
-                    overlaps = not (
-                        task_due_dt < timeoff_start_dt or task_start_dt > timeoff_end_dt
-                    )
+                        # Handle both date objects and string formats
+                        if isinstance(task_start, str):
+                            task_start_dt = datetime.fromisoformat(
+                                task_start.replace("Z", "+00:00")
+                            ).date()
+                        elif isinstance(task_start, date):
+                            task_start_dt = task_start
+                        else:
+                            task_start_dt = None
+
+                        if isinstance(task_due, str):
+                            task_due_dt = datetime.fromisoformat(
+                                task_due.replace("Z", "+00:00")
+                            ).date()
+                        elif isinstance(task_due, date):
+                            task_due_dt = task_due
+                        else:
+                            task_due_dt = None
+
+                        if isinstance(start_date, str):
+                            timeoff_start_dt = datetime.fromisoformat(
+                                start_date.replace("Z", "+00:00")
+                            ).date()
+                        elif isinstance(start_date, date):
+                            timeoff_start_dt = start_date
+                        else:
+                            timeoff_start_dt = None
+
+                        if isinstance(end_date, str):
+                            timeoff_end_dt = datetime.fromisoformat(
+                                end_date.replace("Z", "+00:00")
+                            ).date()
+                        elif isinstance(end_date, date):
+                            timeoff_end_dt = end_date
+                        else:
+                            timeoff_end_dt = None
+
+                        # Only check overlap if all dates were parsed successfully
+                        if all(
+                            [
+                                task_start_dt,
+                                task_due_dt,
+                                timeoff_start_dt,
+                                timeoff_end_dt,
+                            ]
+                        ):
+                            overlaps = not (
+                                task_due_dt < timeoff_start_dt
+                                or task_start_dt > timeoff_end_dt
+                            )
+                        # If any date parsing failed, assume overlap to be safe
+                    except Exception as e:
+                        print(
+                            f"Warning: Date parsing failed for task {task.get('project_task_id', 'unknown')}: {e}"
+                        )
+                        # Assume overlap when dates can't be parsed
 
                 if overlaps:
                     assignments.append(

@@ -10,14 +10,9 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from .ai.agents.orchestrator import run as orchestrator_run
-from .ai.agents.project_management import (
-    analyze_project_health,
-    create_comprehensive_project_plan,
-    handle_project_management,
-)
+from .ai.agents.project_management import handle_project_management
 from .config import agent_config, app_config
 from .events.bus import BusinessEvent, event_bus
-from .models.project import ProjectCreateRequest as PMProjectCreateRequest
 from .models.project import ProjectManagementRequest
 
 app = FastAPI()
@@ -102,8 +97,6 @@ async def root():
             "agent_query": "/api/v1/agent/query",
             "project_plan": "/api/v1/agent/project-plan",
             "project_management": "/api/v1/project-management/query",
-            "project_create": "/api/v1/project-management/create",
-            "project_analyze": "/api/v1/project-management/analyze/{project_id}",
             "quote": "/api/v1/agent/quote",
             "capacity": "/api/v1/agent/capacity-analysis",
             "time_off_created": "/api/v1/agent/time-off-created",
@@ -178,44 +171,6 @@ async def project_management_query(request: ProjectManagementRequest):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Project management query failed: {str(e)}"
-        )
-
-
-@app.post("/api/v1/project-management/create")
-async def create_project_plan_endpoint(request: PMProjectCreateRequest):
-    """
-    Create a comprehensive project plan with database integration using structured models
-    """
-    try:
-        # Convert structured request to dict format expected by create_comprehensive_project_plan
-        project_data = {
-            "name": request.project_name,
-            "description": request.description,
-            "client_id": request.client_id,
-            "project_status": request.project_status,
-            "project_start_date": request.project_start_date,
-            "project_due_date": request.project_due_date,
-        }
-
-        result = create_comprehensive_project_plan(project_data)
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Project creation failed: {str(e)}"
-        )
-
-
-@app.get("/api/v1/project-management/analyze/{project_id}")
-async def analyze_project_endpoint(project_id: str):
-    """
-    Analyze project health and provide recommendations
-    """
-    try:
-        result = analyze_project_health(project_id)
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Project analysis failed: {str(e)}"
         )
 
 
