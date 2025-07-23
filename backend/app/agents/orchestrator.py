@@ -1,9 +1,9 @@
 from strands import Agent
 
+from ..events.bus import BusinessEvent, BusinessEventType, event_bus
 from .project_management import project_management_agent
 from .quotes import quotes_agent
 from .resource_management import resource_management_agent
-from ..events.bus import event_bus, BusinessEvent, BusinessEventType
 
 MAIN_SYSTEM_PROMPT = """
 You are an assistant that routes queries to specialized agents:
@@ -12,6 +12,8 @@ You are an assistant that routes queries to specialized agents:
 - For queries related to staffers, assignments, resource allocation → Use the resource_management_agent tool
 
 Always select the most appropriate tool based on the user's query.
+
+The resource_management_agent specializes in staffer reassignment scenarios and returns structured responses.
 """
 
 orchestrator = Agent(
@@ -45,7 +47,7 @@ async def run(query: str):
                 BusinessEvent(
                     type=BusinessEventType.TEST,
                     message=f"Query processed by the orchestrator",
-                    agent_id="orchestrator"
+                    agent_id="orchestrator",
                 )
             )
 
