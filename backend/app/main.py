@@ -285,26 +285,13 @@ async def subscribe_to_events():
         event_bus.subscribe(handle_event)
         try:
             while True:
-                event = await queue.get()
-                yield {
-                    "event": event.type.value,
-                    "data": json.dumps(
-                        {
-                            "type": event.type.value,
-                            "message": event.message,
-                            "agent_id": event.agent_id.value,
-                            "timestamp": event.timestamp.isoformat(),
-                        }
-                    ),
-                }
                 try:
                     event = await queue.get()
                     if event:
                         data = {
                             "type": event.type.value,
                             "agent_id": event.agent_id.value,
-                            "timestamp": event.timestamp.isoformat()
-                            + "Z",  # Explicitly mark as UTC
+                            "timestamp": event.timestamp.isoformat() + "Z",  # Explicitly mark as UTC
                             "message": event.message,
                         }
                         yield {
@@ -321,8 +308,6 @@ async def subscribe_to_events():
             pass
         finally:
             event_bus.unsubscribe(handle_event)
-
-    return EventSourceResponse(event_generator())
 
     return EventSourceResponse(
         event_generator(),

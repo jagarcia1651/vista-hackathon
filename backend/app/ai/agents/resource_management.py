@@ -157,7 +157,7 @@ def find_staffer_by_name(staffer_name: str) -> Optional[StafferInfo]:
 
 
 @function_tool
-def get_staffer_task_assignments(
+async def get_staffer_task_assignments(
     staffer_id: str, start_date: str, end_date: str
 ) -> List[TaskAssignment]:
     """
@@ -175,6 +175,25 @@ def get_staffer_task_assignments(
         if not supabase_client:
             print("Did not find supabase client")
             return []
+
+        # Get staffer info for human-readable event
+        staffer_result = (
+            supabase_client.table("staffers")
+            .select("first_name, last_name")
+            .eq("id", staffer_id)
+            .execute()
+        )
+        staffer_name = staffer_id
+        if staffer_result.data and len(staffer_result.data) > 0:
+            staffer = staffer_result.data[0]
+            staffer_name = f"{staffer['first_name']} {staffer['last_name']}"
+
+        # Emit event that we're checking assignments
+        await event_bus.emit(BusinessEvent(
+            type=BusinessEventType.UPDATE,
+            message=f"Checking task assignments for {staffer_name} between {start_date} and {end_date}",
+            agent_id=AgentType.RESOURCE_MANAGEMENT
+        ))
 
         # Get staffer assignments with task and project details
         result = (
@@ -286,6 +305,26 @@ def get_staffer_task_assignments(
                             current_staffer_id=staffer_id,
                         )
                     )
+                    # Emit event for found overlap
+                    await event_bus.emit(BusinessEvent(
+                        type=BusinessEventType.UPDATE,
+                        message=f"Found overlap: Task '{task['project_task_name']}' in project '{project['project_name']}' needs attention",
+                        agent_id=AgentType.RESOURCE_MANAGEMENT
+                    ))
+
+        # Emit summary event
+        if assignments:
+            await event_bus.emit(BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Found {len(assignments)} tasks that need reassignment for {staffer_name}'s time off",
+                agent_id=AgentType.RESOURCE_MANAGEMENT
+            ))
+        else:
+            await event_bus.emit(BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"No task conflicts found for {staffer_name}'s time off period",
+                agent_id=AgentType.RESOURCE_MANAGEMENT
+            ))
 
         return assignments
 
