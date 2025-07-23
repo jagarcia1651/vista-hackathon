@@ -1,16 +1,9 @@
 "use client";
 
-import {
-   Card,
-   CardContent,
-   CardDescription,
-   CardHeader,
-   CardTitle
-} from "@/components/ui/card";
-import { AgentCards } from "./AgentCards";
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
 import { useEventStream } from "@/contexts/EventStreamContext";
+import { ListTodo } from "lucide-react";
+import { AgentCards } from "./AgentCards";
 
 interface DashboardClientProps {
    userEmail?: string;
@@ -29,16 +22,6 @@ export function DashboardClient({ userEmail, userId }: DashboardClientProps) {
       <div className="space-y-8">
          {/* Agent Cards */}
          <AgentCards onAgentClick={handleAgentClick} />
-
-         {/* Chat Button */}
-         <Button
-            onClick={toggleSidebar}
-            className="fixed bottom-4 right-4 shadow-lg"
-            size="lg"
-         >
-            <MessageCircle className="mr-2 h-5 w-5" />
-            Chat with AI Assistant
-         </Button>
       </div>
    );
 }

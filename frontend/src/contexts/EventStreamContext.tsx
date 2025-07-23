@@ -9,14 +9,10 @@ import {
    ReactNode
 } from "react";
 import { useAuth } from "./AuthContext";
-import { UIEvent, ChatMessage } from "@/types/events";
+import { UIEvent } from "@/types/events";
 
 interface EventStreamContextType {
    events: UIEvent[];
-   handleChatMessage: (
-      message: string,
-      role: "user" | "assistant"
-   ) => Promise<void>;
    backendStatus: "connecting" | "connected" | "disconnected";
    isOpen: boolean;
    toggleSidebar: () => void;
@@ -79,53 +75,7 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
             eventSourceRef.current = null;
          }
       };
-   }, [user]); // Only depend on user changes
-
-   useEffect(() => {
-      const eventSource = new EventSource("/api/v1/agent/events");
-
-      eventSource.onmessage = event => {
-         try {
-            // The event.data is already a string, so we just need to parse it once
-            const data = JSON.parse(event.data);
-
-            // Handle the event based on its type
-            if (data.type === "TEST" || data.type === "UPDATE") {
-               // Add the event to our state
-               setEvents(prev => [
-                  ...prev,
-                  {
-                     type: "chat",
-                     role: "assistant",
-                     content: data.message,
-                     timestamp: data.timestamp
-                  }
-               ]);
-               // Increment unread count if sidebar is closed
-               if (!isOpen) {
-                  setUnreadCount(prev => prev + 1);
-               }
-            }
-            setBackendStatus("connected");
-         } catch (error) {
-            console.error("Error parsing event data:", error, event.data);
-         }
-      };
-
-      eventSource.onerror = error => {
-         console.error("EventSource error:", error);
-         setBackendStatus("disconnected");
-         // Attempt to reconnect after a delay
-         setTimeout(() => {
-            eventSource.close();
-            // The EventSource will automatically try to reconnect
-         }, 1000);
-      };
-
-      return () => {
-         eventSource.close();
-      };
-   }, [isOpen]); // Only re-run if isOpen changes
+   }, [user]);
 
    // Update unread count when sidebar state changes
    useEffect(() => {
@@ -133,19 +83,6 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
          setUnreadCount(0);
       }
    }, [isOpen]);
-
-   const handleChatMessage = async (
-      message: string,
-      role: "user" | "assistant"
-   ) => {
-      const chatMessage: ChatMessage = {
-         type: "chat",
-         role,
-         content: message,
-         timestamp: new Date().toISOString()
-      };
-      setEvents(prev => [...prev, chatMessage]);
-   };
 
    const toggleSidebar = () => {
       setIsOpen(prev => !prev);
@@ -156,7 +93,6 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
          value={{
             events,
             backendStatus,
-            handleChatMessage,
             isOpen,
             toggleSidebar,
             unreadCount
@@ -169,8 +105,10 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
 
 export const useEventStream = () => {
    const context = useContext(EventStreamContext);
-   if (!context) {
-      throw new Error("useEventStream must be used within EventStreamProvider");
+   if (context === undefined) {
+      throw new Error(
+         "useEventStream must be used within an EventStreamProvider"
+      );
    }
    return context;
 };
