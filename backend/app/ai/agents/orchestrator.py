@@ -41,6 +41,7 @@ The resource_management_agent specializes in staffer reassignment scenarios and 
 # Create the orchestrator using the specialized agents as tools
 orchestrator = Agent(
     name="orchestrator",
+    model="gpt-4o-mini",
     instructions=MAIN_SYSTEM_PROMPT,
     tools=[
         project_management_agent.as_tool(

@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from agents import Agent, function_tool
 from pydantic import BaseModel
 
+from ...events.bus import AgentType, BusinessEvent, BusinessEventType, event_bus
 from ...models.project import (
     ProjectDetailsResponse,
     ProjectResponse,
@@ -24,7 +25,6 @@ from ...models.project import (
 from ...services.projectService import ProjectService
 from ...services.projectTaskService import ProjectTaskService
 from ...utils.supabase_client import supabase_client
-from ...events.bus import event_bus, BusinessEvent, BusinessEventType, AgentType
 
 # Streamlined Project Management System Prompt
 PROJECT_MANAGEMENT_PROMPT = """
@@ -83,11 +83,13 @@ async def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
 
         if result.data:
             # Emit event for successful task assignment
-            await event_bus.emit(BusinessEvent(
-                type=BusinessEventType.UPDATE,
-                message=f"Task {task_id} assigned to staffer {new_staffer_id}",
-                agent_id=AgentType.PROJECT
-            ))
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.UPDATE,
+                    message=f"Task {task_id} assigned to staffer {new_staffer_id}",
+                    agent_id=AgentType.PROJECT,
+                )
+            )
             return True
 
         return False
@@ -123,11 +125,13 @@ async def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
         )
 
         # Emit event for successful task assignment removal
-        await event_bus.emit(BusinessEvent(
-            type=BusinessEventType.UPDATE,
-            message=f"Task {task_id} unassigned from staffer {staffer_id}",
-            agent_id=AgentType.PROJECT
-        ))
+        await event_bus.emit(
+            BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Task {task_id} unassigned from staffer {staffer_id}",
+                agent_id=AgentType.PROJECT,
+            )
+        )
         return True
 
     except Exception as e:
@@ -228,15 +232,17 @@ async def update_task_details(
         return TaskResponse(success=False, error="No update data provided")
 
     response = ProjectTaskService.update_task(task_id, updates)
-    
+
     if response.success:
         # Emit event for successful task details update
-        await event_bus.emit(BusinessEvent(
-            type=BusinessEventType.UPDATE,
-            message=f"Task {task_id} details updated: {', '.join(updates.keys())}",
-            agent_id=AgentType.PROJECT
-        ))
-    
+        await event_bus.emit(
+            BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Task {task_id} details updated: {', '.join(updates.keys())}",
+                agent_id=AgentType.PROJECT,
+            )
+        )
+
     return response
 
 
@@ -256,15 +262,17 @@ async def update_task_status(task_id: str, new_status: str) -> TaskResponse:
         # Convert string to TaskStatus enum
         status_enum = TaskStatus(new_status.lower())
         response = ProjectTaskService.update_task_status(task_id, status_enum)
-        
+
         if response.success:
             # Emit event for successful task status update
-            await event_bus.emit(BusinessEvent(
-                type=BusinessEventType.UPDATE,
-                message=f"Task {task_id} status updated to {new_status}",
-                agent_id=AgentType.PROJECT
-            ))
-        
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.UPDATE,
+                    message=f"Task {task_id} status updated to {new_status}",
+                    agent_id=AgentType.PROJECT,
+                )
+            )
+
         return response
     except ValueError:
         return TaskResponse(
@@ -278,7 +286,9 @@ async def update_task_status(task_id: str, new_status: str) -> TaskResponse:
 
 
 @function_tool
-async def update_project_status_tool(project_id: str, new_status: str) -> ProjectResponse:
+async def update_project_status_tool(
+    project_id: str, new_status: str
+) -> ProjectResponse:
     """
     Update the status of a project using the ProjectService.
 
@@ -293,15 +303,17 @@ async def update_project_status_tool(project_id: str, new_status: str) -> Projec
         # Convert string to ProjectStatus enum
         status_enum = ProjectStatus(new_status.lower())
         response = ProjectService.update_project_status(project_id, status_enum)
-        
+
         if response.success:
             # Emit event for successful project status update
-            await event_bus.emit(BusinessEvent(
-                type=BusinessEventType.UPDATE,
-                message=f"Project {project_id} status updated to {new_status}",
-                agent_id=AgentType.PROJECT
-            ))
-        
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.UPDATE,
+                    message=f"Project {project_id} status updated to {new_status}",
+                    agent_id=AgentType.PROJECT,
+                )
+            )
+
         return response
     except ValueError:
         return ProjectResponse(
@@ -336,6 +348,7 @@ async def update_project_due_date_tool(
         # Basic date format validation if due_date is provided
         if due_date:
             from datetime import datetime
+
             try:
                 datetime.strptime(due_date, "%Y-%m-%d")
             except ValueError:
@@ -345,15 +358,17 @@ async def update_project_due_date_tool(
                 )
 
         response = ProjectService.update_project_due_date(project_id, due_date)
-        
+
         if response.success:
             # Emit event for successful project due date update
-            await event_bus.emit(BusinessEvent(
-                type=BusinessEventType.UPDATE,
-                message=f"Project {project_id} due date updated to {due_date or 'None'}",
-                agent_id=AgentType.PROJECT
-            ))
-        
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.UPDATE,
+                    message=f"Project {project_id} due date updated to {due_date or 'None'}",
+                    agent_id=AgentType.PROJECT,
+                )
+            )
+
         return response
     except Exception as e:
         return ProjectResponse(
@@ -364,6 +379,7 @@ async def update_project_due_date_tool(
 # Create the streamlined project management agent
 project_management_agent = Agent(
     name="project_management_agent",
+    model="gpt-4o-mini",
     instructions=PROJECT_MANAGEMENT_PROMPT,
     tools=[
         # Core functions needed for time-off reassignment flow
