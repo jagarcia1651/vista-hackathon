@@ -92,7 +92,7 @@ def test_database_tools():
     print("\n🔧 Testing Database Tools...")
 
     try:
-        from app.agents.project_management import (
+        from app.ai.agents.project_management import (
             create_project_phase,
             create_project_record,
             create_project_task,
@@ -142,13 +142,13 @@ async def test_agent_creation():
     print("\n🤖 Testing Enhanced Project Management Agent...")
 
     try:
-        from app.agents.project_management import project_management_agent
+        from app.ai.agents.project_management import handle_project_management
 
         # Test a simple query
         test_query = "Hello, I need help with project planning. What are the key phases for a software development project?"
 
         print("Sending test query to agent...")
-        response = project_management_agent(test_query)
+        response = await handle_project_management(test_query)
 
         if response and "Error" not in response:
             print("✅ Agent responded successfully")
@@ -171,7 +171,7 @@ def test_project_planning_functions():
     print("\n📋 Testing Project Planning Functions...")
 
     try:
-        from app.agents.project_management import create_comprehensive_project_plan
+        from app.ai.agents.project_management import create_comprehensive_project_plan
 
         # Test project data
         project_data = {

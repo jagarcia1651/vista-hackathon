@@ -73,7 +73,7 @@ async def test_agent_creation():
     print("\n🤖 Testing Agent Creation...")
 
     try:
-        from app.agents.orchestrator import PSAOrchestrator
+        from app.ai.agents.orchestrator import PSAOrchestrator
 
         # Test orchestrator creation
         orchestrator = PSAOrchestrator()

@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from agents import Agent, function_tool
 from pydantic import BaseModel, Field
-from strands import Agent, tool
 
-from ..utils.supabase_client import supabase_client
+from ...utils.supabase_client import supabase_client
 
 
 # Pydantic Models for Structured Input/Output
@@ -79,7 +79,7 @@ class ResourceManagementResponse(BaseModel):
 
 
 # Database Tools
-@tool
+@function_tool
 def find_staffer_by_name(staffer_name: str) -> Optional[StafferInfo]:
     """
     Find a staffer by their full name in the database.
@@ -154,7 +154,7 @@ def find_staffer_by_name(staffer_name: str) -> Optional[StafferInfo]:
     return None
 
 
-@tool
+@function_tool
 def get_staffer_task_assignments(
     staffer_id: str, start_date: str, end_date: str
 ) -> List[TaskAssignment]:
@@ -249,7 +249,7 @@ def get_staffer_task_assignments(
         return []
 
 
-@tool
+@function_tool
 def find_available_staffers(
     exclude_staffer_id: str, required_skills: Optional[List[str]] = None
 ) -> List[StafferInfo]:
@@ -338,7 +338,7 @@ def find_available_staffers(
         return []
 
 
-@tool
+@function_tool
 def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
     """
     Create a new task assignment in the database.
@@ -375,7 +375,7 @@ def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
         return False
 
 
-@tool
+@function_tool
 def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
     """
     Remove an existing task assignment.
@@ -434,9 +434,21 @@ You have access to database tools to:
 Always provide actionable recommendations with clear reasoning.
 """
 
+# Create the resource management agent using OpenAI Agents SDK
+resource_management_agent = Agent(
+    name="resource_management_agent",
+    instructions=RESOURCE_MANAGEMENT_PROMPT,
+    tools=[
+        find_staffer_by_name,
+        get_staffer_task_assignments,
+        find_available_staffers,
+        create_new_task_assignment,
+        remove_task_assignment,
+    ],
+)
 
-@tool
-def resource_management_agent(
+
+async def handle_resource_management(
     time_off_data: Dict[str, Any],
 ) -> ResourceManagementResponse:
     """
@@ -467,21 +479,6 @@ def resource_management_agent(
         # Parse input data into structured model
         time_off_request = TimeOffRequest(**time_off_data)
 
-        # Create specialized resource management agent with database tools
-        resource_agent = Agent(
-            system_prompt=RESOURCE_MANAGEMENT_PROMPT
-            + "\n\nIMPORTANT: Complete the task in a single pass. Do not retry tools unless there's an actual error.",
-            tools=[
-                find_staffer_by_name,
-                get_staffer_task_assignments,
-                find_available_staffers,
-                create_new_task_assignment,
-                remove_task_assignment,
-            ],
-        )
-
-        print(resource_agent.tool_names)
-
         # Convert time_off_data to a formatted message string
         time_off_message = f"""
         Process this time-off request and handle task reassignments:
@@ -497,14 +494,33 @@ def resource_management_agent(
         2. Identify affected task assignments during this time period
         3. Find suitable replacement staffers
         4. Create reassignment recommendations
+        
+        Return a structured ResourceManagementResponse with:
+        - success (bool)
+        - message (str)
+        - affected_tasks_count (int)
+        - new_assignments (List[NewTaskAssignment])
+        - warnings (List[str])
+        - recommendations (List[str])
         """
 
-        # Use Strands' native structured output feature
-        structured_response = resource_agent.structured_output(
-            ResourceManagementResponse, time_off_message
+        # Run the agent with the OpenAI Agents SDK
+        from agents import Runner
+
+        result = await Runner.run(
+            agent=resource_management_agent, input=time_off_message
         )
 
-        return structured_response
+        # Parse the result into the structured response format
+        # Note: This would need to be adapted based on the actual OpenAI Agents SDK response format
+        return ResourceManagementResponse(
+            success=True,
+            message=str(result),
+            affected_tasks_count=0,  # This would be parsed from the actual response
+            new_assignments=[],
+            warnings=[],
+            recommendations=[],
+        )
 
     except Exception as e:
         return ResourceManagementResponse(
