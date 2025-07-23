@@ -1,9 +1,11 @@
 export type BusinessEventType = "TEST";
 
+export type AgentType = "PROJECT" | "RESOURCE_MANAGEMENT" | "PROFITABILITY";
+
 export type BusinessEvent = {
    type: BusinessEventType;
    message: string;
-   agent_id: string;
+   agent_id: AgentType;
    timestamp: string;
 };
 

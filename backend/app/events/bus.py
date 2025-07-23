@@ -1,16 +1,21 @@
 from enum import Enum
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Callable, Awaitable
+from typing import List, Callable, Awaitable, Dict, Any
 
 class BusinessEventType(Enum):
-    TEST = "test"
+    TEST = "TEST"
+
+class AgentType(Enum):
+    PROJECT = "PROJECT"
+    RESOURCE_MANAGEMENT = "RESOURCE_MANAGEMENT"
+    PROFITABILITY = "PROFITABILITY"
 
 @dataclass
 class BusinessEvent:
     type: BusinessEventType
     message: str
-    agent_id: str
+    agent_id: AgentType
     timestamp: datetime = datetime.now()
 
 class EventBus:
