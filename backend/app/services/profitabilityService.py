@@ -112,11 +112,7 @@ class ProfitabilityService:
     @staticmethod
     def calculate_project_profitability(project_id: str) -> float:
         """
-        Calculate the total profitability for a project using a Supabase Edge Function.
-
-        This method calls the 'get-total-profitability' Edge Function that should contain
-        the profitability calculation logic.
-
+        Calculate the total profitability for a project using a view
         Args:
             project_id: UUID of the project
 
@@ -127,7 +123,7 @@ class ProfitabilityService:
             if not supabase_client:
                 raise Exception("Database connection not available")
 
-            result = (
+            response = (
                 supabase_client.table("project_profitability_view")
                 .select("*")
                 .eq("project_id", project_id)
