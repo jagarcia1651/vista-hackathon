@@ -21,15 +21,22 @@ For PROJECT MANAGEMENT queries, use the project_management_agent tool:
 - Task creation, updates, status tracking, or completion
 - Project phases, milestones, and deliverables
 - Overall project health, delays, or timeline adjustments
+- **Executing actual task reassignments and project modifications**
+
+AGENT RESPONSIBILITIES:
+- **Resource Management Agent**: ANALYZES and DECIDES on reassignment needs. Returns structured recommendations indicating WHO should be assigned to WHAT tasks, but does NOT execute changes.
+- **Project Management Agent**: EXECUTES actual modifications including task reassignments, updating project timelines, changing project status, and implementing the decisions made by the resource management agent.
 
 KEY PRINCIPLES:
 - Time-off related queries should ALWAYS go to resource_management_agent first
 - The resource_management_agent returns structured responses indicating reassignment intent
+- For executing reassignments or project updates, use project_management_agent
 - When in doubt about staffing/resource issues, prefer resource_management_agent
 - Always select the most appropriate tool based on the primary intent of the query
 
 The resource_management_agent specializes in staffer reassignment scenarios and returns structured responses with specific recommendations for task reassignments.
 """
+
 
 # Create the orchestrator using the specialized agents as tools
 orchestrator = Agent(

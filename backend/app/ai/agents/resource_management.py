@@ -338,75 +338,6 @@ def find_available_staffers(
         return []
 
 
-@function_tool
-def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
-    """
-    Create a new task assignment in the database.
-
-    Args:
-        new_staffer_id: ID of the staffer to assign
-        task_id: ID of the task to assign
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        if not supabase_client:
-            print("Did not find supabase client")
-            return False
-
-        assignment_data = {
-            "staffer_id": new_staffer_id,
-            "project_task_id": task_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_updated_at": datetime.utcnow().isoformat(),
-        }
-
-        result = (
-            supabase_client.table("staffer_assignments")
-            .insert(assignment_data)
-            .execute()
-        )
-
-        return bool(result.data)
-
-    except Exception as e:
-        print(f"Error creating new task assignment: {e}")
-        return False
-
-
-@function_tool
-def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
-    """
-    Remove an existing task assignment.
-
-    Args:
-        staffer_id: ID of the current staffer
-        task_id: ID of the task
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        if not supabase_client:
-            print("Did not find supabase client")
-            return False
-
-        result = (
-            supabase_client.table("staffer_assignments")
-            .delete()
-            .eq("staffer_id", staffer_id)
-            .eq("project_task_id", task_id)
-            .execute()
-        )
-
-        return True
-
-    except Exception as e:
-        print(f"Error removing task assignment: {e}")
-        return False
-
-
 # System Prompt for Resource Management Agent
 RESOURCE_MANAGEMENT_PROMPT = """
 You are a resource management specialist focused on handling staffer time-off scenarios and task reassignments.
@@ -414,16 +345,29 @@ You are a resource management specialist focused on handling staffer time-off sc
 When a staffer takes time off, your job is to:
 1. Identify affected task assignments that overlap with the time-off period
 2. Find suitable replacement staffers based on skills, capacity, and availability
-3. Create new task assignments to ensure project continuity
-4. Provide structured responses with clear recommendations
+3. **CLEARLY INDICATE which staffers should be assigned to which specific tasks**
+4. Provide structured responses with explicit assignment recommendations
+
+CRITICAL: Your response must explicitly indicate assignment intentions using the structured models:
+- Use NewTaskAssignment objects to specify exactly which staffer should take over which task
+- Include clear reasoning in the assignment_reason field
+- Provide confidence scores for each recommended assignment
+- If no suitable replacement is found, clearly state this in warnings
 
 Key principles:
 - Prioritize task continuity and project deadlines
 - Match staffers based on skills, seniority, and capacity
 - Consider time zones and existing workload
-- Provide confidence scores for assignment recommendations
+- **Always populate the new_assignments list with specific assignment recommendations**
+- Provide confidence scores for assignment recommendations (0.0 to 1.0)
 - Always use structured database tools to gather current information
 - Return structured responses using the ResourceManagementResponse model
+
+Assignment Decision Making:
+- For each affected task, determine if a replacement staffer should be assigned
+- If yes: Create a NewTaskAssignment with original staffer, new staffer, and clear reasoning
+- If no suitable replacement: Document this in warnings with explanation
+- Consider staffer availability, skills match, and project team membership
 
 You have access to database tools to:
 - Find staffers by name
@@ -431,7 +375,7 @@ You have access to database tools to:
 - Find available replacement staffers  
 - Create and remove task assignments
 
-Always provide actionable recommendations with clear reasoning.
+Always provide actionable assignment recommendations with clear reasoning and confidence scores.
 """
 
 # Create the resource management agent using OpenAI Agents SDK
@@ -442,8 +386,6 @@ resource_management_agent = Agent(
         find_staffer_by_name,
         get_staffer_task_assignments,
         find_available_staffers,
-        create_new_task_assignment,
-        remove_task_assignment,
     ],
 )
 
