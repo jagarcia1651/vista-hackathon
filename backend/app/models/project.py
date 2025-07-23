@@ -2,7 +2,7 @@
 Project Entity Models - Python equivalents of shared TypeScript schemas
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional, Tuple, Union
 from uuid import UUID
@@ -47,8 +47,8 @@ class Project(BaseEntity):
     client_id: str
     project_name: str
     project_status: str
-    project_start_date: Optional[str] = None
-    project_due_date: Optional[str] = None
+    project_start_date: Optional[date] = None
+    project_due_date: Optional[date] = None
 
 
 class ProjectPhase(BaseEntity):
@@ -58,8 +58,8 @@ class ProjectPhase(BaseEntity):
     project_phase_name: str
     project_phase_description: Optional[str] = None
     project_phase_status: str
-    project_phase_start_date: Optional[str] = None
-    project_phase_due_date: Optional[str] = None
+    project_phase_start_date: Optional[date] = None
+    project_phase_due_date: Optional[date] = None
 
 
 class ProjectTask(BaseEntity):
@@ -69,8 +69,8 @@ class ProjectTask(BaseEntity):
     project_task_name: str
     project_task_description: Optional[str] = None
     project_task_status: str
-    project_task_start_date: Optional[str] = None
-    project_task_due_date: Optional[str] = None
+    project_task_start_date: Optional[date] = None
+    project_task_due_date: Optional[date] = None
     estimated_hours: Optional[int] = None
     actual_hours: Optional[int] = None
 
@@ -166,8 +166,8 @@ class ProjectFinancials(BaseModel):
 class ProjectFilters(BaseModel):
     status: Optional[List[ProjectStatus]] = None
     client_ids: Optional[List[str]] = None
-    start_date_range: Optional[Tuple[str, str]] = None
-    due_date_range: Optional[Tuple[str, str]] = None
+    start_date_range: Optional[Tuple[date, date]] = None
+    due_date_range: Optional[Tuple[date, date]] = None
     assigned_staffer_ids: Optional[List[str]] = None
 
 
@@ -189,16 +189,16 @@ class ProjectCreateRequest(BaseModel):
     project_name: str
     client_id: str
     project_status: str = "RFP"
-    project_start_date: Optional[str] = None
-    project_due_date: Optional[str] = None
+    project_start_date: Optional[date] = None
+    project_due_date: Optional[date] = None
     description: Optional[str] = None
 
 
 class ProjectUpdateRequest(BaseModel):
     project_name: Optional[str] = None
     project_status: Optional[str] = None
-    project_start_date: Optional[str] = None
-    project_due_date: Optional[str] = None
+    project_start_date: Optional[date] = None
+    project_due_date: Optional[date] = None
 
 
 class PhaseCreateRequest(BaseModel):
@@ -207,8 +207,8 @@ class PhaseCreateRequest(BaseModel):
     phase_description: Optional[str] = None
     phase_number: int
     phase_status: str = "Planned"
-    phase_start_date: Optional[str] = None
-    phase_due_date: Optional[str] = None
+    phase_start_date: Optional[date] = None
+    phase_due_date: Optional[date] = None
 
 
 class ProjectTaskCreateRequest(BaseModel):
@@ -217,8 +217,8 @@ class ProjectTaskCreateRequest(BaseModel):
     task_description: Optional[str] = None
     project_phase_id: Optional[str] = None
     task_status: str = "To Do"
-    task_start_date: Optional[str] = None
-    task_due_date: Optional[str] = None
+    task_start_date: Optional[date] = None
+    task_due_date: Optional[date] = None
     estimated_hours: Optional[int] = None
 
 
