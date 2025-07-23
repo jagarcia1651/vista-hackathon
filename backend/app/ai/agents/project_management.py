@@ -68,6 +68,28 @@ async def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
             print("Did not find supabase client")
             return False
 
+        # Get task and staffer details for human-readable event
+        task_result = (
+            supabase_client.table("project_tasks")
+            .select("project_task_name")
+            .eq("project_task_id", task_id)
+            .execute()
+        )
+        staffer_result = (
+            supabase_client.table("staffers")
+            .select("first_name, last_name")
+            .eq("id", new_staffer_id)
+            .execute()
+        )
+
+        task_name = task_id
+        staffer_name = new_staffer_id
+        if task_result.data and len(task_result.data) > 0:
+            task_name = task_result.data[0]["project_task_name"]
+        if staffer_result.data and len(staffer_result.data) > 0:
+            staffer = staffer_result.data[0]
+            staffer_name = f"{staffer['first_name']} {staffer['last_name']}"
+
         assignment_data = {
             "staffer_id": new_staffer_id,
             "project_task_id": task_id,
@@ -86,7 +108,7 @@ async def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
             await event_bus.emit(
                 BusinessEvent(
                     type=BusinessEventType.UPDATE,
-                    message=f"Task {task_id} assigned to staffer {new_staffer_id}",
+                    message=f"Task '{task_name}' assigned to {staffer_name}",
                     agent_id=AgentType.PROJECT,
                 )
             )
@@ -116,6 +138,28 @@ async def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
             print("Did not find supabase client")
             return False
 
+        # Get task and staffer details for human-readable event
+        task_result = (
+            supabase_client.table("project_tasks")
+            .select("project_task_name")
+            .eq("project_task_id", task_id)
+            .execute()
+        )
+        staffer_result = (
+            supabase_client.table("staffers")
+            .select("first_name, last_name")
+            .eq("id", staffer_id)
+            .execute()
+        )
+
+        task_name = task_id
+        staffer_name = staffer_id
+        if task_result.data and len(task_result.data) > 0:
+            task_name = task_result.data[0]["project_task_name"]
+        if staffer_result.data and len(staffer_result.data) > 0:
+            staffer = staffer_result.data[0]
+            staffer_name = f"{staffer['first_name']} {staffer['last_name']}"
+
         result = (
             supabase_client.table("staffer_assignments")
             .delete()
@@ -128,7 +172,7 @@ async def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
         await event_bus.emit(
             BusinessEvent(
                 type=BusinessEventType.UPDATE,
-                message=f"Task {task_id} unassigned from staffer {staffer_id}",
+                message=f"Task '{task_name}' unassigned from {staffer_name}",
                 agent_id=AgentType.PROJECT,
             )
         )
