@@ -34,7 +34,12 @@ export function TimeOffForm({
 
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
       if (start > end) return 0;
-      if (start == end && start.getDay() >= 1 && start.getDay() <= 5) return 8;
+      if (
+         start.getMonth() === end.getMonth() &&
+         start.getFullYear() === end.getFullYear() &&
+         start.getDay() === end.getDay()
+      )
+         return 1;
 
       let weekdays = 0;
       const current = new Date(start);
