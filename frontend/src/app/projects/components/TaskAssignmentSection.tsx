@@ -8,6 +8,7 @@ import { assignmentService } from "../services/assignmentService";
 import { taskService } from "../services/taskService";
 import { teamService } from "../services/teamService";
 import { X } from "lucide-react";
+import { TaskStatus } from "@/types/base";
 
 interface TaskAssignmentSectionProps {
    projectId: string;
@@ -172,6 +173,21 @@ export function TaskAssignmentSection({
       }
    };
 
+   const getStatusColor = (status: TaskStatus) => {
+      switch (status) {
+         case TaskStatus.COMPLETED:
+            return "bg-green-100 text-green-800";
+         case TaskStatus.IN_PROGRESS_ON_TRACK:
+            return "bg-blue-100 text-blue-800";
+         case TaskStatus.IN_PROGRESS_OFF_TRACK:
+            return "bg-orange-100 text-orange-800";
+         case TaskStatus.CANCELLED:
+            return "bg-red-100 text-red-800";
+         default:
+            return "bg-gray-100 text-gray-800";
+      }
+   };
+
    if (tasks.length === 0) {
       return (
          <div className="text-sm text-gray-500 italic">
@@ -200,15 +216,9 @@ export function TaskAssignmentSection({
                         </p>
                      </div>
                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                           task.project_task_status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : task.project_task_status === "in_progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : task.project_task_status === "blocked"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                           task.project_task_status as TaskStatus
+                        )}`}
                      >
                         {task.project_task_status}
                      </span>
