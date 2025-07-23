@@ -52,7 +52,7 @@ Project Management Capabilities:
 - Search projects by name or criteria
 - Get projects by exact name or partial name match
 - Track project progress and identify overdue projects
-- Update project status and details
+- Update project status, due dates, and other details
 - Get comprehensive project details with tasks, and teams
 - Monitor all projects, active projects, or client-specific projects
 
@@ -76,6 +76,7 @@ Real-time thinking examples you should demonstrate:
 - "Reviewing task completion status..."
 - "Identifying overdue tasks requiring attention..."
 - "Looking up task by name to check status..."
+- "Updating project due date to accommodate timeline changes..."
 - "Searching for similar projects in the database..."
 - "Looking up project by exact name match..."
 - "Filtering projects by status to identify priorities..."
@@ -469,6 +470,44 @@ def update_project_status_tool(project_id: str, new_status: str) -> ProjectRespo
         )
 
 
+@tool
+def update_project_due_date_tool(
+    project_id: str, due_date: Optional[str] = None
+) -> ProjectResponse:
+    """
+    Update the due date of a project using the ProjectService.
+
+    Args:
+        project_id: UUID of the project to update
+        due_date: New due date in YYYY-MM-DD format (None or empty string to clear due date)
+
+    Returns:
+        ProjectResponse with updated project data or error
+    """
+    try:
+        # Handle empty string as None
+        if due_date == "":
+            due_date = None
+
+        # Basic date format validation if due_date is provided
+        if due_date:
+            from datetime import datetime
+
+            try:
+                datetime.strptime(due_date, "%Y-%m-%d")
+            except ValueError:
+                return ProjectResponse(
+                    success=False,
+                    error=f"Invalid date format: {due_date}. Please use YYYY-MM-DD format.",
+                )
+
+        return ProjectService.update_project_due_date(project_id, due_date)
+    except Exception as e:
+        return ProjectResponse(
+            success=False, error=f"Error updating project due date: {str(e)}"
+        )
+
+
 # Project Task Management Tools using ProjectTaskService
 
 
@@ -792,6 +831,7 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
                 get_project_by_name,
                 search_projects,
                 update_project_status_tool,
+                update_project_due_date_tool,
                 # Task management tools using ProjectTaskService
                 get_task_by_id,
                 get_task_by_name,
