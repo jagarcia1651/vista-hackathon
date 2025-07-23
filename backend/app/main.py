@@ -257,7 +257,11 @@ async def time_off_created(request: StafferTimeOffRequest):
         print(f"Request dict: {request.dict()}")
 
         # Create a test message for the orchestrator about the time off creation
-        query = f"Time off has been created for staffer {request.staffer_id} from {request.time_off_start_datetime} to {request.time_off_end_datetime} with {request.time_off_cumulative_hours} hours. Please analyze potential impact on project schedules and resource allocation."
+        query = f"""
+            Time off has been created for staffer {request.staffer_id} from {request.time_off_start_datetime} to {request.time_off_end_datetime} with {request.time_off_cumulative_hours} hours.
+            Analyze potential impact on project schedules and resource allocation.
+            If the time off occurs when a staffer is assigned to a project task, assign an available staffer on the project team to the task.
+        """
 
         # Trigger orchestrator agent with the time off information
         asyncio.create_task(orchestrator_run(query))
