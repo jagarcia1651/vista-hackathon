@@ -16,6 +16,7 @@ interface EventStreamContextType {
       message: string,
       role: "user" | "assistant"
    ) => Promise<void>;
+   backendStatus: "connecting" | "connected" | "disconnected";
    isOpen: boolean;
    toggleSidebar: () => void;
    unreadCount: number;
@@ -28,6 +29,9 @@ const EventStreamContext = createContext<EventStreamContextType | undefined>(
 export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
    const [events, setEvents] = useState<UIEvent[]>([]);
    const [isOpen, setIsOpen] = useState(false);
+   const [backendStatus, setBackendStatus] = useState<
+      "connecting" | "connected" | "disconnected"
+   >("connecting");
    const [unreadCount, setUnreadCount] = useState(0);
    const { user } = useAuth();
 
@@ -46,8 +50,13 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
          }
       };
 
+      eventSource.onopen = () => {
+         setBackendStatus("connected");
+      };
+
       eventSource.onerror = error => {
          console.error("EventSource error:", error);
+         setBackendStatus("disconnected");
       };
 
       return () => eventSource.close();
@@ -77,6 +86,7 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
       <EventStreamContext.Provider
          value={{
             events,
+            backendStatus,
             handleChatMessage,
             isOpen,
             toggleSidebar,
