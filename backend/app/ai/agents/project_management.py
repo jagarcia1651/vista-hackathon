@@ -282,7 +282,7 @@ async def update_task_details(
         await event_bus.emit(
             BusinessEvent(
                 type=BusinessEventType.UPDATE,
-                message=f"Task {task_id} details updated: {', '.join(updates.keys())}",
+                message=f"Task {task_name} details updated: {', '.join(updates.keys())}",
                 agent_id=AgentType.PROJECT,
             )
         )
