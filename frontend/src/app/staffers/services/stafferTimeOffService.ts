@@ -99,26 +99,6 @@ class StafferTimeOffService {
                   last_updated_at: createdTimeOff.last_updated_at,
                };
 
-               console.log("Sending time off data to backend:", payload);
-
-               // First, call debug endpoint to see what we're sending
-               try {
-                  const debugResponse = await fetch(
-                     "/api/v1/agent/time-off-created-debug",
-                     {
-                        method: "POST",
-                        headers: {
-                           "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(payload),
-                     }
-                  );
-                  const debugResult = await debugResponse.json();
-                  console.log("Debug endpoint response:", debugResult);
-               } catch (debugError) {
-                  console.error("Debug endpoint error:", debugError);
-               }
-
                // Call the backend endpoint to trigger orchestrator
                const response = await fetch("/api/v1/agent/time-off-created", {
                   method: "POST",
