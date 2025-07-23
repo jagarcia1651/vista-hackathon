@@ -534,6 +534,7 @@ Always provide actionable assignment recommendations with clear reasoning, confi
 # Create the resource management agent using OpenAI Agents SDK
 resource_management_agent = Agent(
     name="resource_management_agent",
+    model="gpt-4o-mini",
     instructions=RESOURCE_MANAGEMENT_PROMPT,
     tools=[
         find_staffer_by_name,
