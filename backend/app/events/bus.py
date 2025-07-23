@@ -5,8 +5,10 @@ from typing import List, Callable, Awaitable, Dict, Any
 
 class BusinessEventType(Enum):
     TEST = "TEST"
+    ERROR = "ERROR"
 
 class AgentType(Enum):
+    ORCHESTRATOR = "ORCHESTRATOR"
     PROJECT = "PROJECT"
     RESOURCE_MANAGEMENT = "RESOURCE_MANAGEMENT"
     PROFITABILITY = "PROFITABILITY"

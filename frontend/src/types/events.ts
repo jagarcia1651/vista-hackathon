@@ -1,6 +1,10 @@
-export type BusinessEventType = "TEST";
+export type BusinessEventType = "TEST" | "ERROR";
 
-export type AgentType = "PROJECT" | "RESOURCE_MANAGEMENT" | "PROFITABILITY";
+export type AgentType =
+   | "ORCHESTRATOR"
+   | "PROJECT"
+   | "RESOURCE_MANAGEMENT"
+   | "PROFITABILITY";
 
 export type BusinessEvent = {
    type: BusinessEventType;
