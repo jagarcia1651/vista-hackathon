@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { useEventStream } from "@/contexts/EventStreamContext";
-import { UIEvent } from "@/types/events";
-import { cn } from "@/lib/utils";
 import {
    Sheet,
    SheetContent,
@@ -16,36 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const EventDisplay = ({ event }: { event: UIEvent }) => {
-   if (event.type === "chat") {
-      return (
-         <div
-            className={cn(
-               "rounded-lg p-3",
-               event.role === "user" ? "bg-primary/10 ml-8" : "bg-muted mr-8"
-            )}
-         >
-            {event.content}
-         </div>
-      );
-   }
-
-   return (
-      <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
-         <div className="flex-1">
-            <p className="text-sm font-medium">
-               {event.type === "STAFF_REASSIGNMENT" && "Staff Reassigned"}
-               {event.type === "PTO_CONFLICT" && "PTO Conflict Detected"}
-               {event.type === "TASK_REASSIGNMENT" && "Task Reassigned"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-               {new Date(event.timestamp).toLocaleString()}
-            </p>
-         </div>
-      </div>
-   );
-};
+import { EventDisplay } from "./EventDisplay";
+import { cn } from "@/lib/utils";
 
 export const EventSidebar = () => {
    const { events, handleChatMessage, isOpen, toggleSidebar, unreadCount } =
@@ -53,12 +23,17 @@ export const EventSidebar = () => {
    const [inputValue, setInputValue] = useState("");
 
    return (
-      <Sheet open={isOpen} onOpenChange={toggleSidebar}>
+      <Sheet open={isOpen} onOpenChange={toggleSidebar} modal={false}>
          <SheetTrigger asChild>
             <Button
-               variant="outline"
+               variant={isOpen ? "outline" : "default"}
                size="icon"
-               className="fixed right-0 top-1/2 transform -translate-y-1/2 rounded-l-md rounded-r-none"
+               className={cn(
+                  "fixed right-0 top-[20%] rounded-l-md rounded-r-none transform-gpu cursor-pointer",
+                  !isOpen &&
+                     "bg-primary text-primary-foreground hover:bg-primary sidebar-attention"
+               )}
+               style={{ transformOrigin: "center right" }}
             >
                {isOpen ? (
                   <ChevronRight className="h-4 w-4" />

@@ -27,7 +27,7 @@ const EventStreamContext = createContext<EventStreamContextType | undefined>(
 
 export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
    const [events, setEvents] = useState<UIEvent[]>([]);
-   const [isOpen, setIsOpen] = useState(true);
+   const [isOpen, setIsOpen] = useState(false);
    const [unreadCount, setUnreadCount] = useState(0);
    const { user } = useAuth();
 
