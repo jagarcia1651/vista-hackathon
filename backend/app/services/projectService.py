@@ -232,6 +232,22 @@ class ProjectService:
         )
 
     @staticmethod
+    def update_project_due_date(
+        project_id: str, due_date: Optional[str]
+    ) -> ProjectResponse:
+        """
+        Update the due date of a project.
+
+        Args:
+            project_id: UUID of the project to update
+            due_date: New due date in YYYY-MM-DD format (None to clear due date)
+
+        Returns:
+            ProjectResponse with updated project data or error
+        """
+        return ProjectService.update_project(project_id, {"project_due_date": due_date})
+
+    @staticmethod
     def delete_project(project_id: str) -> DatabaseResponse:
         """
         Delete a project from the database.
