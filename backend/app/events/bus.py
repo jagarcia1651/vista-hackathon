@@ -6,6 +6,7 @@ from typing import List, Callable, Awaitable, Dict, Any
 class BusinessEventType(Enum):
     TEST = "TEST"
     ERROR = "ERROR"
+    UPDATE = "UPDATE"
 
 class AgentType(Enum):
     ORCHESTRATOR = "ORCHESTRATOR"
