@@ -6,7 +6,7 @@ import json
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
+from uuid import uuid
 
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
@@ -75,7 +75,7 @@ _project_baselines_created = set()  # Track which projects have baselines this s
 
 @tool
 def create_profitability_baseline(
-    project_id: str,
+    project_id: uuid,
     triggered_by_agent: str = "system",
     triggered_by_action: str = "baseline_creation",
 ) -> Dict[str, Any]:
@@ -146,7 +146,7 @@ def create_profitability_baseline(
 
 @tool
 def create_profitability_snapshot_after_change(
-    project_id: str, triggered_by_agent: str, triggered_by_action: str
+    project_id: uuid, triggered_by_agent: str, triggered_by_action: str
 ) -> Dict[str, Any]:
     """
     Create a new profitability snapshot after an agent makes project changes.
@@ -242,7 +242,7 @@ def create_profitability_snapshot_after_change(
 
 
 @tool
-def analyze_profitability_trends(project_id: str) -> Dict[str, Any]:
+def analyze_profitability_trends(project_id: uuid) -> Dict[str, Any]:
     """
     Analyze profitability trends and changes for a project.
 
@@ -330,7 +330,7 @@ def _format_profitability_change(delta) -> str:
 
 @tool
 def monitor_project_profitability(
-    project_id: str, agent_action: str, triggered_by_agent: str
+    project_id: uuid, agent_action: str, triggered_by_agent: str
 ) -> str:
     """
     Complete profitability monitoring flow: create baseline if needed, then snapshot after change.
