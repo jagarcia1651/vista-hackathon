@@ -1,5 +1,6 @@
 from strands import Agent
 
+from .profitability import profitability_agent
 from .project_management import project_management_agent
 from .quotes import quotes_agent
 from .resource_management import resource_management_agent
@@ -10,6 +11,12 @@ You are an assistant that routes queries to specialized agents:
 - For queries related to quotes → Use the quotes_agent tool
 - For queries related to project management, planning, tasks, phases → Use the project_management_agent tool
 - For queries related to staffers, assignments, resource allocation → Use the resource_management_agent tool
+- For queries related to project profitability, financial impact, cost analysis → Use the profitability_agent tool
+
+The profitability agent automatically monitors project changes:
+- Creates baseline profitability snapshots before first project modifications
+- Tracks profitability changes after agent actions
+- Reports financial impact and delta analysis
 
 Always select the most appropriate tool based on the user's query.
 """
@@ -18,7 +25,12 @@ orchestrator = Agent(
     name="orchestrator",
     system_prompt=MAIN_SYSTEM_PROMPT,
     callback_handler=None,
-    tools=[quotes_agent, project_management_agent, resource_management_agent],
+    tools=[
+        quotes_agent,
+        project_management_agent,
+        resource_management_agent,
+        profitability_agent,
+    ],
 )
 
 
@@ -87,3 +99,43 @@ def filter_chunk(chunk, seen_tool_ids):
 
     # Filter out everything else
     return None
+
+
+def trigger_profitability_monitoring(
+    project_id: str, agent_name: str, action_description: str
+):
+    """
+    Trigger profitability monitoring after an agent makes project changes.
+    This should be called by other agents after they modify project data.
+
+    Args:
+        project_id: UUID of the project that was modified
+        agent_name: Name of the agent that made the change
+        action_description: Description of what action was performed
+
+    Returns:
+        Profitability analysis result
+    """
+    try:
+        # Import here to avoid circular imports
+        from .profitability import monitor_project_profitability
+
+        # Trigger profitability monitoring
+        result = monitor_project_profitability(
+            project_id=project_id,
+            agent_action=action_description,
+            triggered_by_agent=agent_name,
+        )
+
+        return {
+            "success": True,
+            "profitability_analysis": result,
+            "project_id": project_id,
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error triggering profitability monitoring: {str(e)}",
+            "project_id": project_id,
+        }
