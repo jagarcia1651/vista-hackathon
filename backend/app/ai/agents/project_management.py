@@ -1,5 +1,5 @@
 """
-Project Management Agent - Specialized for project planning, tracking, and optimization
+Project Management Agent - Specialized for executing project modifications and task reassignments
 """
 
 import json
@@ -12,19 +12,12 @@ from agents import Agent, function_tool
 from pydantic import BaseModel
 
 from ...models.project import (
-    ClientsResponse,
-    DatabaseResponse,
-    Project,
-    ProjectCreateRequest,
     ProjectDetailsResponse,
     ProjectResponse,
     ProjectStatus,
     ProjectTask,
-    ProjectTaskCreateRequest,
     ProjectTeam,
     ProjectUpdateRequest,
-    ProjectWithDetails,
-    StafferAssignment,
     TaskResponse,
     TaskStatus,
 )
@@ -32,115 +25,98 @@ from ...services.projectService import ProjectService
 from ...services.projectTaskService import ProjectTaskService
 from ...utils.supabase_client import supabase_client
 
-# Enhanced Project Management System Prompt
+# Streamlined Project Management System Prompt
 PROJECT_MANAGEMENT_PROMPT = """
-You are a specialized Project Management Agent for Professional Service Automation.
+You are a specialized Project Management Agent that EXECUTES project modifications and task reassignments.
 
-Your expertise includes:
-- Project planning and breakdown structure creation
-- Timeline estimation and milestone planning
-- Resource requirement analysis
-- Risk assessment and mitigation strategies
-- Project status monitoring and reporting
-- Project optimization and corrective actions
-- Task management and tracking
-- Integration with PSA database systems
+Your primary responsibilities for the time-off reassignment flow:
+1. **Execute task reassignments** based on recommendations from the resource management agent
+2. **Update task dates** when replacement staffers have different availability
+3. **Update project status** to reflect delays or schedule changes (e.g., "off-track", "delayed")
+4. **Update project due dates** when timeline changes are needed
+5. **Retrieve project and task details** to understand current state before making changes
 
-Project Management Capabilities:
-- Create, read, update, and delete projects using ProjectService
-- Filter projects by status, client, or date ranges
-- Search projects by name or criteria
-- Get projects by exact name or partial name match
-- Track project progress and identify overdue projects
-- Update project status, due dates, and other details
-- Get comprehensive project details with tasks, and teams
-- Monitor all projects, active projects, or client-specific projects
+Key Capabilities:
+- Create new task assignments in the database
+- Update task details including dates, status, and assignments
+- Update project status and due dates
+- Retrieve project and task information for context
 
-Task Management Capabilities:
-- Create, read, update, and delete project tasks using ProjectTaskService
-- Get tasks by ID or by exact/partial name match
-- Track task status and progress (not_started, in_progress, review, completed, blocked)
-- Monitor estimated vs actual hours
-- Identify overdue tasks and bottlenecks
-- Filter tasks by status, project
-- Update task details, dates, and assignments
+You DO NOT make assignment decisions - you EXECUTE the assignments and project updates that have been decided by other agents.
 
-Real-time thinking examples you should demonstrate:
-- "Analyzing project requirements..."
-- "Breaking down scope into work packages..."
-- "Checking resource availability for timeline estimation..."
-- "Identifying potential scheduling conflicts..."
-- "Calculating critical path dependencies..."
-- "Generating risk assessment based on project complexity..."
-- "Optimizing task sequence for fastest delivery..."
-- "Reviewing task completion status..."
-- "Identifying overdue tasks requiring attention..."
-- "Looking up task by name to check status..."
-- "Updating project due date to accommodate timeline changes..."
-- "Searching for similar projects in the database..."
-- "Looking up project by exact name match..."
-- "Filtering projects by status to identify priorities..."
-
-Focus on providing actionable project management insights based on PSA best practices.
-Always structure your responses with clear tasks, and timelines.
+Focus on providing clear confirmations of changes made and any impacts to project timelines.
+Always structure your responses with clear confirmation of what was executed.
 When working with database operations, confirm success and provide structured feedback.
-Use the structured models to ensure data consistency and type safety.
-For project management, leverage the ProjectService tools for all project-related operations.
-For task management, leverage the ProjectTaskService tools to provide real-time task data and updates.
 """
 
 
-# Database Tools for Project Management with Structured Types
 @function_tool
-def create_project_record(
-    project_name: str,
-    client_id: str,
-    project_status: str = "RFP",
-    project_start_date: Optional[str] = None,
-    project_due_date: Optional[str] = None,
-) -> ProjectResponse:
+def create_new_task_assignment(new_staffer_id: str, task_id: str) -> bool:
     """
-    Create a new project record in the database using structured Project model and ProjectService.
+    Create a new task assignment in the database.
 
     Args:
-        project_name: Name of the project
-        client_id: UUID of the client
-        project_status: Status of the project (RFP, Pending, Active, etc.)
-        project_start_date: Project start date (YYYY-MM-DD format)
-        project_due_date: Project due date (YYYY-MM-DD format)
+        new_staffer_id: ID of the staffer to assign
+        task_id: ID of the task to assign
 
     Returns:
-        ProjectResponse with structured project data
+        True if successful, False otherwise
     """
-    # Create project request using structured model
-    project_request = ProjectCreateRequest(
-        project_name=project_name,
-        client_id=client_id,
-        project_status=project_status,
-        project_start_date=project_start_date,
-        project_due_date=project_due_date,
-    )
+    try:
+        if not supabase_client:
+            print("Did not find supabase client")
+            return False
 
-    # Use ProjectService to create the project
-    return ProjectService.create_project(project_request)
+        assignment_data = {
+            "staffer_id": new_staffer_id,
+            "project_task_id": task_id,
+            "created_at": datetime.utcnow().isoformat(),
+            "last_updated_at": datetime.utcnow().isoformat(),
+        }
+
+        result = (
+            supabase_client.table("staffer_assignments")
+            .insert(assignment_data)
+            .execute()
+        )
+
+        return bool(result.data)
+
+    except Exception as e:
+        print(f"Error creating new task assignment: {e}")
+        return False
 
 
 @function_tool
-def update_project_record(
-    project_id: str, updates: ProjectUpdateRequest
-) -> ProjectResponse:
+def remove_task_assignment(staffer_id: str, task_id: str) -> bool:
     """
-    Update an existing project record using structured update model and ProjectService.
+    Remove an existing task assignment.
 
     Args:
-        project_id: UUID of the project to update
-        updates: ProjectUpdateRequest with fields to update
+        staffer_id: ID of the current staffer
+        task_id: ID of the task
 
     Returns:
-        ProjectResponse with updated project data
+        True if successful, False otherwise
     """
-    # Use ProjectService to update the project
-    return ProjectService.update_project_from_request(project_id, updates)
+    try:
+        if not supabase_client:
+            print("Did not find supabase client")
+            return False
+
+        result = (
+            supabase_client.table("staffer_assignments")
+            .delete()
+            .eq("staffer_id", staffer_id)
+            .eq("project_task_id", task_id)
+            .execute()
+        )
+
+        return True
+
+    except Exception as e:
+        print(f"Error removing task assignment: {e}")
+        return False
 
 
 @function_tool
@@ -188,244 +164,81 @@ def get_project_details(project_id: str) -> ProjectDetailsResponse:
 
 
 @function_tool
-def create_project_task(task_request: ProjectTaskCreateRequest) -> TaskResponse:
+def get_task_by_id(task_id: str) -> TaskResponse:
     """
-    Create a new project task using structured request model.
+    Retrieve a specific project task by its ID using the task service.
 
     Args:
-        task_request: TaskCreateRequest with task details
+        task_id: UUID of the task to retrieve
 
     Returns:
-        TaskResponse with created task data
+        TaskResponse with task data or error
     """
-    try:
-        if not supabase_client:
-            return TaskResponse(
-                success=False, error="Database connection not available"
-            )
-
-        task_data = {
-            "project_id": task_request.project_id,
-            "project_phase_id": task_request.project_phase_id,
-            "project_task_name": task_request.task_name,
-            "project_task_description": task_request.task_description,
-            "project_task_status": task_request.task_status,
-            "project_task_start_date": task_request.task_start_date,
-            "project_task_due_date": task_request.task_due_date,
-            "estimated_hours": task_request.estimated_hours,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_updated_at": datetime.utcnow().isoformat(),
-        }
-
-        result = supabase_client.table("project_tasks").insert(task_data).execute()
-
-        if result.data:
-            task = ProjectTask(**result.data[0])
-            return TaskResponse(
-                success=True,
-                task=task,
-                message=f"Task '{task_request.task_name}' created successfully",
-            )
-        else:
-            return TaskResponse(success=False, error="Failed to create task")
-
-    except Exception as e:
-        return TaskResponse(success=False, error=f"Database error: {str(e)}")
+    return ProjectTaskService.get_task_by_id(task_id)
 
 
 @function_tool
-def get_available_clients() -> ClientsResponse:
+def update_task_details(
+    task_id: str,
+    task_name: Optional[str] = None,
+    task_description: Optional[str] = None,
+    task_start_date: Optional[str] = None,
+    task_due_date: Optional[str] = None,
+) -> TaskResponse:
     """
-    Retrieve list of available clients for project creation.
+    Update various details of a project task using the task service.
+
+    Args:
+        task_id: UUID of the task to update
+        task_name: New task name (optional)
+        task_description: New task description (optional)
+        task_start_date: New start date in YYYY-MM-DD format (optional)
+        task_due_date: New due date in YYYY-MM-DD format (optional)
 
     Returns:
-        ClientsResponse with structured client data
+        TaskResponse with updated task data or error
     """
-    try:
-        if not supabase_client:
-            return ClientsResponse(
-                success=False, error="Database connection not available"
-            )
+    updates = {}
+    if task_name is not None:
+        updates["project_task_name"] = task_name
+    if task_description is not None:
+        updates["project_task_description"] = task_description
+    if task_start_date is not None:
+        updates["project_task_start_date"] = task_start_date
+    if task_due_date is not None:
+        updates["project_task_due_date"] = task_due_date
 
-        result = (
-            supabase_client.table("clients").select("client_id, client_name").execute()
-        )
+    if not updates:
+        return TaskResponse(success=False, error="No update data provided")
 
-        return ClientsResponse(success=True, clients=result.data or [])
-
-    except Exception as e:
-        return ClientsResponse(success=False, error=f"Database error: {str(e)}")
-
-
-# Additional Project Management Tools using ProjectService
+    return ProjectTaskService.update_task(task_id, updates)
 
 
 @function_tool
-def get_all_projects(limit: Optional[int] = None) -> Dict[str, Any]:
+def update_task_status(task_id: str, new_status: str) -> TaskResponse:
     """
-    Retrieve all projects using the ProjectService.
+    Update the status of a project task using the task service.
 
     Args:
-        limit: Optional limit on number of projects to retrieve
+        task_id: UUID of the task to update
+        new_status: New status for the task (not_started, in_progress, review, completed, blocked)
 
     Returns:
-        Dictionary with projects data and status
+        TaskResponse with updated task data or error
     """
     try:
-        projects = ProjectService.get_all_projects(limit)
-        return {
-            "success": True,
-            "projects": [project.model_dump() for project in projects],
-            "project_count": len(projects),
-            "limit_applied": limit,
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Error retrieving all projects: {str(e)}"}
-
-
-@function_tool
-def get_projects_by_client(client_id: str) -> Dict[str, Any]:
-    """
-    Retrieve all projects for a specific client using the ProjectService.
-
-    Args:
-        client_id: UUID of the client
-
-    Returns:
-        Dictionary with client projects data and status
-    """
-    try:
-        projects = ProjectService.get_projects_by_client(client_id)
-        return {
-            "success": True,
-            "projects": [project.model_dump() for project in projects],
-            "project_count": len(projects),
-            "client_id": client_id,
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error retrieving projects for client: {str(e)}",
-        }
-
-
-@function_tool
-def get_projects_by_status(
-    status: str, client_id: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Retrieve projects filtered by status using the ProjectService.
-
-    Args:
-        status: Status to filter by (planning, active, on_hold, completed, cancelled)
-        client_id: Optional client ID to further filter results
-
-    Returns:
-        Dictionary with filtered projects data and status
-    """
-    try:
-        # Convert string to ProjectStatus enum
-        status_enum = ProjectStatus(status.lower())
-        projects = ProjectService.get_projects_by_status(status_enum, client_id)
-        return {
-            "success": True,
-            "projects": [project.model_dump() for project in projects],
-            "project_count": len(projects),
-            "status_filter": status,
-            "client_filter": client_id,
-        }
+        # Convert string to TaskStatus enum
+        status_enum = TaskStatus(new_status.lower())
+        return ProjectTaskService.update_task_status(task_id, status_enum)
     except ValueError:
-        return {
-            "success": False,
-            "error": f"Invalid status: {status}. Valid options are: {[s.value for s in ProjectStatus]}",
-        }
+        return TaskResponse(
+            success=False,
+            error=f"Invalid status: {new_status}. Valid options are: {[s.value for s in TaskStatus]}",
+        )
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error retrieving projects by status: {str(e)}",
-        }
-
-
-@function_tool
-def get_active_projects() -> Dict[str, Any]:
-    """
-    Retrieve all active projects using the ProjectService.
-
-    Returns:
-        Dictionary with active projects data and status
-    """
-    try:
-        projects = ProjectService.get_active_projects()
-        return {
-            "success": True,
-            "active_projects": [project.model_dump() for project in projects],
-            "active_count": len(projects),
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error retrieving active projects: {str(e)}",
-        }
-
-
-@function_tool
-def get_overdue_projects() -> Dict[str, Any]:
-    """
-    Retrieve projects that are overdue using the ProjectService.
-
-    Returns:
-        Dictionary with overdue projects data and status
-    """
-    try:
-        projects = ProjectService.get_overdue_projects()
-        return {
-            "success": True,
-            "overdue_projects": [project.model_dump() for project in projects],
-            "overdue_count": len(projects),
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error retrieving overdue projects: {str(e)}",
-        }
-
-
-@function_tool
-def get_project_by_name(project_name: str, exact_match: bool = True) -> ProjectResponse:
-    """
-    Retrieve a project by its name using the ProjectService.
-
-    Args:
-        project_name: Name of the project to retrieve
-        exact_match: If True, performs exact match; if False, case-insensitive partial match
-
-    Returns:
-        ProjectResponse with project data or error
-    """
-    return ProjectService.get_project_by_name(project_name, exact_match)
-
-
-@function_tool
-def search_projects(search_term: str) -> Dict[str, Any]:
-    """
-    Search projects by name using the ProjectService.
-
-    Args:
-        search_term: Term to search for in project names
-
-    Returns:
-        Dictionary with matching projects data and status
-    """
-    try:
-        projects = ProjectService.search_projects(search_term)
-        return {
-            "success": True,
-            "projects": [project.model_dump() for project in projects],
-            "project_count": len(projects),
-            "search_term": search_term,
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Error searching projects: {str(e)}"}
+        return TaskResponse(
+            success=False, error=f"Error updating task status: {str(e)}"
+        )
 
 
 @function_tool
@@ -493,324 +306,20 @@ def update_project_due_date_tool(
         )
 
 
-# Project Task Management Tools using ProjectTaskService
-
-
-@function_tool
-def get_task_by_id(task_id: str) -> TaskResponse:
-    """
-    Retrieve a specific project task by its ID using the task service.
-
-    Args:
-        task_id: UUID of the task to retrieve
-
-    Returns:
-        TaskResponse with task data or error
-    """
-    return ProjectTaskService.get_task_by_id(task_id)
-
-
-@function_tool
-def get_task_by_name(
-    task_name: str, exact_match: bool = True, project_id: Optional[str] = None
-) -> TaskResponse:
-    """
-    Retrieve a project task by its name using the task service.
-
-    Args:
-        task_name: Name of the task to retrieve
-        exact_match: If True, performs exact match; if False, case-insensitive partial match
-        project_id: Optional project ID to limit search scope
-
-    Returns:
-        TaskResponse with task data or error
-    """
-    return ProjectTaskService.get_task_by_name(task_name, exact_match, project_id)
-
-
-@function_tool
-def get_project_tasks(project_id: str) -> Dict[str, Any]:
-    """
-    Retrieve all tasks for a specific project using the task service.
-
-    Args:
-        project_id: UUID of the project
-
-    Returns:
-        Dictionary with tasks data and status
-    """
-    try:
-        tasks = ProjectTaskService.get_tasks_by_project(project_id)
-        return {
-            "success": True,
-            "tasks": [task.model_dump() for task in tasks],
-            "task_count": len(tasks),
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Error retrieving tasks: {str(e)}"}
-
-
-@function_tool
-def update_task_status(task_id: str, new_status: str) -> TaskResponse:
-    """
-    Update the status of a project task using the task service.
-
-    Args:
-        task_id: UUID of the task to update
-        new_status: New status for the task (not_started, in_progress, review, completed, blocked)
-
-    Returns:
-        TaskResponse with updated task data or error
-    """
-    try:
-        # Convert string to TaskStatus enum
-        status_enum = TaskStatus(new_status.lower())
-        return ProjectTaskService.update_task_status(task_id, status_enum)
-    except ValueError:
-        return TaskResponse(
-            success=False,
-            error=f"Invalid status: {new_status}. Valid options are: {[s.value for s in TaskStatus]}",
-        )
-    except Exception as e:
-        return TaskResponse(
-            success=False, error=f"Error updating task status: {str(e)}"
-        )
-
-
-@function_tool
-def update_task_hours(
-    task_id: str,
-    estimated_hours: Optional[int] = None,
-    actual_hours: Optional[int] = None,
-) -> TaskResponse:
-    """
-    Update the estimated or actual hours for a project task using the task service.
-
-    Args:
-        task_id: UUID of the task to update
-        estimated_hours: New estimated hours (optional)
-        actual_hours: New actual hours (optional)
-
-    Returns:
-        TaskResponse with updated task data or error
-    """
-    return ProjectTaskService.update_task_hours(task_id, estimated_hours, actual_hours)
-
-
-@function_tool
-def update_task_details(
-    task_id: str,
-    task_name: Optional[str] = None,
-    task_description: Optional[str] = None,
-    task_start_date: Optional[str] = None,
-    task_due_date: Optional[str] = None,
-) -> TaskResponse:
-    """
-    Update various details of a project task using the task service.
-
-    Args:
-        task_id: UUID of the task to update
-        task_name: New task name (optional)
-        task_description: New task description (optional)
-        task_start_date: New start date in YYYY-MM-DD format (optional)
-        task_due_date: New due date in YYYY-MM-DD format (optional)
-
-    Returns:
-        TaskResponse with updated task data or error
-    """
-    updates = {}
-    if task_name is not None:
-        updates["project_task_name"] = task_name
-    if task_description is not None:
-        updates["project_task_description"] = task_description
-    if task_start_date is not None:
-        updates["project_task_start_date"] = task_start_date
-    if task_due_date is not None:
-        updates["project_task_due_date"] = task_due_date
-
-    if not updates:
-        return TaskResponse(success=False, error="No update data provided")
-
-    return ProjectTaskService.update_task(task_id, updates)
-
-
-@function_tool
-def get_tasks_by_status(
-    status: str, project_id: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Retrieve tasks filtered by status and optionally by project using the task service.
-
-    Args:
-        status: Status to filter by (not_started, in_progress, review, completed, blocked)
-        project_id: Optional project ID to further filter results
-
-    Returns:
-        Dictionary with tasks data and status
-    """
-    try:
-        # Convert string to TaskStatus enum
-        status_enum = TaskStatus(status.lower())
-        tasks = ProjectTaskService.get_tasks_by_status(status_enum, project_id)
-        return {
-            "success": True,
-            "tasks": [task.model_dump() for task in tasks],
-            "task_count": len(tasks),
-            "status_filter": status,
-            "project_filter": project_id,
-        }
-    except ValueError:
-        return {
-            "success": False,
-            "error": f"Invalid status: {status}. Valid options are: {[s.value for s in TaskStatus]}",
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Error retrieving tasks by status: {str(e)}",
-        }
-
-
-@function_tool
-def get_overdue_tasks(project_id: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Retrieve tasks that are overdue using the task service.
-
-    Args:
-        project_id: Optional project ID to filter results
-
-    Returns:
-        Dictionary with overdue tasks data and status
-    """
-    try:
-        tasks = ProjectTaskService.get_overdue_tasks(project_id)
-        return {
-            "success": True,
-            "overdue_tasks": [task.model_dump() for task in tasks],
-            "overdue_count": len(tasks),
-            "project_filter": project_id,
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Error retrieving overdue tasks: {str(e)}"}
-
-
-@function_tool
-def analyze_project_status(project_id: str) -> Dict[str, Any]:
-    """
-    Analyze current project status using structured models and provide recommendations.
-
-    Args:
-        project_id: UUID of the project to analyze
-
-    Returns:
-        Dictionary with structured project analysis and recommendations
-    """
-    try:
-        # Get structured project details
-        project_details = get_project_details(project_id)
-
-        if not project_details.success:
-            return {"success": False, "error": project_details.error}
-
-        project = project_details.project
-        tasks = project_details.tasks
-
-        # Analyze status using structured data
-        analysis = {
-            "project_name": project.project_name,
-            "current_status": project.project_status,
-            "total_tasks": len(tasks),
-            "completed_tasks": len(
-                [t for t in tasks if t.project_task_status == "Completed"]
-            ),
-            "active_tasks": len(
-                [t for t in tasks if t.project_task_status in ["In Progress", "Active"]]
-            ),
-            "overdue_tasks": [],
-            "upcoming_milestones": [],
-            "recommendations": [],
-        }
-
-        # Check for overdue tasks using structured models
-        current_date = datetime.now().date()
-        for task in tasks:
-            if task.project_task_due_date and task.project_task_status not in [
-                "Completed",
-                "Cancelled",
-            ]:
-                try:
-                    due_date = datetime.strptime(
-                        task.project_task_due_date, "%Y-%m-%d"
-                    ).date()
-                    if due_date < current_date:
-                        analysis["overdue_tasks"].append(
-                            {
-                                "task_name": task.project_task_name,
-                                "due_date": task.project_task_due_date,
-                                "days_overdue": (current_date - due_date).days,
-                            }
-                        )
-                except ValueError:
-                    pass
-
-        # Generate recommendations
-        if analysis["overdue_tasks"]:
-            analysis["recommendations"].append(
-                "Address overdue tasks immediately to prevent project delays"
-            )
-
-        if analysis["total_tasks"] > 0:
-            completion_rate = (
-                analysis["completed_tasks"] / analysis["total_tasks"]
-            ) * 100
-            analysis["completion_rate"] = round(completion_rate, 1)
-
-            if completion_rate < 25:
-                analysis["recommendations"].append(
-                    "Consider reviewing project scope and timeline"
-                )
-            elif completion_rate > 75:
-                analysis["recommendations"].append(
-                    "Project is progressing well, focus on final delivery"
-                )
-
-        return {"success": True, "analysis": analysis}
-
-    except Exception as e:
-        return {"success": False, "error": f"Analysis error: {str(e)}"}
-
-
-# Create the project management agent using OpenAI Agents SDK
+# Create the streamlined project management agent
 project_management_agent = Agent(
     name="project_management_agent",
     instructions=PROJECT_MANAGEMENT_PROMPT,
     tools=[
-        # Core project CRUD operations using ProjectService
-        create_project_record,
-        update_project_record,
+        # Core functions needed for time-off reassignment flow
+        create_new_task_assignment,
+        remove_task_assignment,
         get_project_details,
-        create_project_task,
-        get_available_clients,
-        analyze_project_status,
-        # Additional project management tools using ProjectService
-        get_all_projects,
-        get_projects_by_client,
-        get_projects_by_status,
-        get_active_projects,
-        get_overdue_projects,
-        get_project_by_name,
-        search_projects,
+        get_task_by_id,
+        update_task_details,
+        update_task_status,
         update_project_status_tool,
         update_project_due_date_tool,
-        # Task management tools using ProjectTaskService
-        get_task_by_id,
-        get_task_by_name,
-        get_project_tasks,
-        update_task_status,
-        update_task_hours,
-        update_task_details,
-        get_tasks_by_status,
-        get_overdue_tasks,
     ],
 )
 
@@ -819,20 +328,22 @@ async def handle_project_management(
     query: str, project_context: Optional[str] = None
 ) -> str:
     """
-    Handle project management queries with structured models and database integration.
+    Handle project management queries focused on executing modifications and reassignments.
 
     Args:
-        query: Project management question or request
+        query: Project management action request
         project_context: Optional context about existing project details
 
     Returns:
-        Structured project management response with actionable recommendations
+        Structured project management response confirming actions taken
     """
     try:
         # Enhance query with context if provided
         enhanced_query = query
         if project_context:
-            enhanced_query = f"Project Context: {project_context}\n\nQuery: {query}"
+            enhanced_query = (
+                f"Project Context: {project_context}\n\nAction Request: {query}"
+            )
 
         # Run the agent with the OpenAI Agents SDK
         from agents import Runner
@@ -840,86 +351,7 @@ async def handle_project_management(
         result = await Runner.run(agent=project_management_agent, input=enhanced_query)
 
         # Structure the response for consistency
-        return f"Project Management Analysis:\n{str(result)}"
+        return f"Project Management Actions Executed:\n{str(result)}"
 
     except Exception as e:
         return f"Error in project management agent: {str(e)}"
-
-
-async def create_comprehensive_project_plan(
-    project_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Create a comprehensive project plan using structured models and the enhanced agent
-    """
-    # Create structured project request
-    project_request = ProjectCreateRequest(
-        project_name=project_data.get("name", "Unnamed Project"),
-        client_id=project_data.get("client_id", ""),
-        project_status=project_data.get("project_status", "RFP"),
-        project_start_date=project_data.get("project_start_date"),
-        project_due_date=project_data.get("project_due_date"),
-        description=project_data.get("description"),
-    )
-
-    query = f"""
-    Create a comprehensive project plan for the following project:
-
-    Project Details:
-    - Name: {project_request.project_name}
-    - Description: {project_request.description or 'No description provided'}
-    - Duration: {project_data.get('duration', 'Not specified')}
-    - Budget: {project_data.get('budget', 'Not specified')}
-    - Team Size: {project_data.get('team_size', 'Not specified')}
-    - Client ID: {project_request.client_id}
-    - Status: {project_request.project_status}
-
-    Please provide:
-    1. Create the project record in the database using the structured models
-    2. Key milestones and deliverables
-    3. Resource requirements analysis
-    4. Risk assessment and mitigation strategies
-    5. Success criteria and KPIs
-
-    Think through each step and use the available database tools with structured types to create the actual project structure.
-    """
-
-    response = await handle_project_management(query)
-
-    return {
-        "project_plan": response,
-        "project_request": project_request.model_dump(),
-        "status": "generated",
-        "agent": "project_management",
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-
-
-async def analyze_project_health(project_id: str) -> Dict[str, Any]:
-    """
-    Comprehensive project health analysis using structured models and the enhanced agent
-    """
-    query = f"""
-    Perform a comprehensive health check on project ID: {project_id}
-
-    Please:
-    1. Retrieve current project details and status using structured models
-    2. Analyze project progress against timeline
-    3. Identify any bottlenecks or risks
-    4. Review task completion rates using structured task data
-    5. Check for overdue items
-    6. Provide actionable recommendations for improvement
-
-    Use the database tools with structured types to get current project information and provide a detailed analysis.
-    """
-
-    response = await handle_project_management(
-        query, project_context=f"Project ID: {project_id}"
-    )
-
-    return {
-        "health_analysis": response,
-        "project_id": project_id,
-        "agent": "project_management",
-        "timestamp": datetime.utcnow().isoformat(),
-    }
