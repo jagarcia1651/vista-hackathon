@@ -4,17 +4,14 @@ from datetime import datetime
 from typing import List, Callable, Awaitable
 
 class BusinessEventType(Enum):
-    STAFF_REASSIGNMENT = "staff_reassignment"
-    PTO_CONFLICT = "pto_conflict"
-    TASK_REASSIGNMENT = "task_reassignment"
-    CHAT_MESSAGE = "chat_message"
+    TEST = "test"
 
 @dataclass
 class BusinessEvent:
     type: BusinessEventType
-    data: dict
+    message: str
     agent_id: str
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now()
 
 class EventBus:
     _instance = None

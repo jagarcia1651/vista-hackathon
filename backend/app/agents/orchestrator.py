@@ -3,6 +3,7 @@ from strands import Agent
 from .project_management import project_management_agent
 from .quotes import quotes_agent
 from .resource_management import resource_management_agent
+from ..events.bus import event_bus, BusinessEvent, BusinessEventType
 
 MAIN_SYSTEM_PROMPT = """
 You are an assistant that routes queries to specialized agents:
@@ -26,10 +27,27 @@ async def run(query: str):
     seen_tool_ids = set()  # Track tool calls to avoid duplicates
 
     async for event in agent_stream:
-        # Filter and format chunks for UI consumption
-        filtered_chunk = filter_chunk(event, seen_tool_ids)
-        if filtered_chunk:
-            yield filtered_chunk
+        # # Filter and format chunks for UI consumption
+        # filtered_chunk = filter_chunk(event, seen_tool_ids)
+        # if filtered_chunk:
+        #     # Instead of yielding, emit as an event
+        #     await event_bus.emit(
+        #         BusinessEvent(
+        #             type=BusinessEventType.TEST,
+        #             message=filtered_chunk.get("this is testing a", ""),
+        #             agent_id=filtered_chunk.get("agent_id", "orchestrator")
+        #         )
+        #     )
+
+        # If this is the final result, emit a test event
+        if "result" in event:
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.TEST,
+                    message=f"Query processed by the orchestrator",
+                    agent_id="orchestrator"
+                )
+            )
 
 
 def filter_chunk(chunk, seen_tool_ids):

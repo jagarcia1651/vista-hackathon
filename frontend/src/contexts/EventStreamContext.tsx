@@ -5,6 +5,7 @@ import {
    useContext,
    useState,
    useEffect,
+   useRef,
    ReactNode
 } from "react";
 import { useAuth } from "./AuthContext";
@@ -34,33 +35,104 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
    >("connecting");
    const [unreadCount, setUnreadCount] = useState(0);
    const { user } = useAuth();
+   const eventSourceRef = useRef<EventSource | null>(null);
 
    useEffect(() => {
-      if (!user) return;
+      if (!user) {
+         // Clean up existing connection if user logs out
+         if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+            setBackendStatus("disconnected");
+         }
+         return;
+      }
 
-      const eventSource = new EventSource(
-         "http://localhost:8000/api/v1/agent/events"
-      );
+      // Only create a new EventSource if one doesn't exist
+      if (!eventSourceRef.current) {
+         eventSourceRef.current = new EventSource(
+            "http://localhost:8000/api/v1/agent/events"
+         );
 
-      eventSource.onmessage = event => {
-         const businessEvent = JSON.parse(event.data);
-         setEvents(prev => [...prev, businessEvent]);
-         if (!isOpen) {
-            setUnreadCount(prev => prev + 1);
+         eventSourceRef.current.onmessage = event => {
+            const businessEvent = JSON.parse(event.data);
+            setEvents(prev => [...prev, businessEvent]);
+            if (!isOpen) {
+               setUnreadCount(prev => prev + 1);
+            }
+         };
+
+         eventSourceRef.current.onopen = () => {
+            setBackendStatus("connected");
+         };
+
+         eventSourceRef.current.onerror = error => {
+            console.error("EventSource error:", error);
+            setBackendStatus("disconnected");
+         };
+      }
+
+      // Clean up function
+      return () => {
+         if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
          }
       };
+   }, [user]); // Only depend on user changes
 
-      eventSource.onopen = () => {
-         setBackendStatus("connected");
+   useEffect(() => {
+      const eventSource = new EventSource("/api/v1/agent/events");
+
+      eventSource.onmessage = event => {
+         try {
+            // The event.data is already a string, so we just need to parse it once
+            const data = JSON.parse(event.data);
+
+            // Handle the event based on its type
+            if (data.type === "TEST") {
+               // Add the event to our state
+               setEvents(prev => [
+                  ...prev,
+                  {
+                     type: "chat",
+                     role: "assistant",
+                     content: data.message,
+                     timestamp: data.timestamp
+                  }
+               ]);
+               // Increment unread count if sidebar is closed
+               if (!isOpen) {
+                  setUnreadCount(prev => prev + 1);
+               }
+            }
+            setBackendStatus("connected");
+         } catch (error) {
+            console.error("Error parsing event data:", error, event.data);
+         }
       };
 
       eventSource.onerror = error => {
          console.error("EventSource error:", error);
          setBackendStatus("disconnected");
+         // Attempt to reconnect after a delay
+         setTimeout(() => {
+            eventSource.close();
+            // The EventSource will automatically try to reconnect
+         }, 1000);
       };
 
-      return () => eventSource.close();
-   }, [user, isOpen]);
+      return () => {
+         eventSource.close();
+      };
+   }, [isOpen]); // Only re-run if isOpen changes
+
+   // Update unread count when sidebar state changes
+   useEffect(() => {
+      if (isOpen) {
+         setUnreadCount(0);
+      }
+   }, [isOpen]);
 
    const handleChatMessage = async (
       message: string,
@@ -77,9 +149,6 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
 
    const toggleSidebar = () => {
       setIsOpen(prev => !prev);
-      if (!isOpen) {
-         setUnreadCount(0);
-      }
    };
 
    return (

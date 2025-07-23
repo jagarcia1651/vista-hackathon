@@ -64,14 +64,8 @@ export const EventSidebar = () => {
       setInputValue("");
       setIsLoading(true);
 
-      // Add loading message
-      await handleChatMessage(
-         "Analyzing your request with our specialist agents...",
-         "assistant"
-      );
-
       try {
-         const response = await fetch("/api/v1/agent/query", {
+         await fetch("/api/v1/agent/query", {
             method: "POST",
             headers: {
                "Content-Type": "application/json"
@@ -84,21 +78,6 @@ export const EventSidebar = () => {
                }
             })
          });
-
-         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-         }
-
-         const data: ChatResponse = await response.json();
-
-         // Remove loading message (this will be handled by the backend event stream)
-         // Add actual response
-         await handleChatMessage(
-            data.response ||
-               data.error ||
-               "Sorry, I encountered an error processing your request.",
-            "assistant"
-         );
       } catch (error) {
          console.error("Chat error:", error);
          await handleChatMessage(getErrorMessage(error), "assistant");
@@ -146,6 +125,30 @@ export const EventSidebar = () => {
       }
    };
 
+   const formatTimestamp = (isoTimestamp: string) => {
+      try {
+         // If timestamp already ends with Z, use it as is, otherwise append Z
+         const timestamp = isoTimestamp.endsWith("Z")
+            ? isoTimestamp
+            : isoTimestamp + "Z";
+         const date = new Date(timestamp);
+         if (isNaN(date.getTime())) {
+            console.error("Invalid timestamp:", isoTimestamp);
+            return "Invalid time";
+         }
+
+         return new Intl.DateTimeFormat(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+            timeZoneName: "short"
+         }).format(date);
+      } catch (error) {
+         console.error("Error formatting timestamp:", error);
+         return "Invalid time";
+      }
+   };
+
    return (
       <Sheet open={isOpen} onOpenChange={toggleSidebar} modal={false}>
          <SheetTrigger asChild>
@@ -177,8 +180,11 @@ export const EventSidebar = () => {
             </Button>
          </SheetTrigger>
 
-         <SheetContent side="right" className="w-[450px] p-0 flex flex-col">
-            <SheetHeader className="p-4 border-b">
+         <SheetContent
+            side="right"
+            className="w-[450px] p-0 flex flex-col h-full overflow-hidden"
+         >
+            <SheetHeader className="p-4 border-b flex-none">
                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                      <MessageCircle className="text-blue-600" size={20} />
@@ -190,7 +196,7 @@ export const EventSidebar = () => {
                </div>
             </SheetHeader>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
                <div className="p-4 space-y-4">
                   {events.map((event, i) =>
                      event.type === "chat" ? (
@@ -219,9 +225,7 @@ export const EventSidebar = () => {
                                        : "text-slate-500"
                                  }`}
                               >
-                                 {new Date(
-                                    event.timestamp
-                                 ).toLocaleTimeString()}
+                                 {formatTimestamp(event.timestamp)}
                               </div>
                            </div>
                         </div>
@@ -233,7 +237,7 @@ export const EventSidebar = () => {
                </div>
             </ScrollArea>
 
-            <div className="p-4 border-t mt-auto">
+            <div className="p-4 border-t flex-none">
                <div className="flex space-x-2">
                   <Textarea
                      value={inputValue}
