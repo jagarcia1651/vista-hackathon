@@ -97,14 +97,37 @@ async def run(query: str):
             # Handle run item events (tool calls, messages, etc.)
             elif event.type == "run_item_stream_event":
                 if event.item.type == "tool_call_item":
-                    tool_name = (
-                        event.item.name
-                        if hasattr(event.item, "name")
-                        else "unknown_tool"
-                    )
-                    tool_args = (
-                        event.item.arguments if hasattr(event.item, "arguments") else {}
-                    )
+                    # Extract tool name from the raw_item according to OpenAI Agents SDK structure
+                    tool_name = "unknown_tool"
+                    tool_args = {}
+
+                    try:
+                        # The tool information is in the raw_item according to the SDK docs
+                        if hasattr(event.item, "raw_item") and event.item.raw_item:
+                            raw_item = event.item.raw_item
+
+                            # For function tools, look for 'function' attribute
+                            if hasattr(raw_item, "function") and raw_item.function:
+                                if hasattr(raw_item.function, "name"):
+                                    tool_name = raw_item.function.name
+                                if hasattr(raw_item.function, "arguments"):
+                                    tool_args = raw_item.function.arguments
+                            # Also try direct name attribute on raw_item
+                            elif hasattr(raw_item, "name"):
+                                tool_name = raw_item.name
+                            # Try other possible attributes
+                            elif hasattr(raw_item, "tool_name"):
+                                tool_name = raw_item.tool_name
+
+                            # Try to get arguments if not found yet
+                            if not tool_args and hasattr(raw_item, "arguments"):
+                                tool_args = raw_item.arguments
+
+                    except Exception as e:
+                        print(f"🔍 Debug - Error extracting tool info: {e}")
+                        print(
+                            f"🔍 Debug - Raw item type: {type(event.item.raw_item) if hasattr(event.item, 'raw_item') else 'No raw_item'}"
+                        )
 
                     print(f"🔧 Tool Called: {tool_name}")
                     print(f"   Arguments: {tool_args}")

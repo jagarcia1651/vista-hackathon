@@ -5,8 +5,8 @@ from uuid import UUID
 from agents import Agent, function_tool
 from pydantic import BaseModel, Field
 
+from ...events.bus import AgentType, BusinessEvent, BusinessEventType, event_bus
 from ...utils.supabase_client import supabase_client
-from ...events.bus import event_bus, BusinessEvent, BusinessEventType, AgentType
 
 
 # Pydantic Models for Structured Input/Output
@@ -61,6 +61,7 @@ class NewTaskAssignment(BaseModel):
     new_staffer_name: str
     task_id: str
     task_name: str
+    project_id: str
     project_name: Optional[str] = None
     assignment_reason: str
     confidence_score: float = Field(
@@ -295,25 +296,30 @@ def get_staffer_task_assignments(
 
 @function_tool
 def find_available_staffers(
-    exclude_staffer_id: str, required_skills: Optional[List[str]] = None
+    exclude_staffer_id: str,
+    start_date: str,
+    end_date: str,
+    project_ids: Optional[List[str]] = None,
 ) -> List[StafferInfo]:
     """
-    Find staffers who could potentially take on reassigned tasks.
+    Find staffers who are available (no PTO conflicts) and on relevant project teams during the specified time period.
 
     Args:
         exclude_staffer_id: ID of staffer taking time off (to exclude)
-        required_skills: Optional list of skill names to match
+        start_date: Start date to check availability (ISO format)
+        end_date: End date to check availability (ISO format)
+        project_ids: Optional list of project IDs to filter team members (if provided, only return staffers on these project teams)
 
     Returns:
-        List of available StafferInfo objects
+        List of available StafferInfo objects (no PTO conflicts and on project teams)
     """
     try:
         if not supabase_client:
             print("Did not find supabase client")
             return []
 
-        # Base query for available staffers
-        query = (
+        # Get all staffers (excluding the one taking time off)
+        staffers_result = (
             supabase_client.table("staffers")
             .select(
                 """
@@ -324,51 +330,129 @@ def find_available_staffers(
                 capacity,
                 time_zone,
                 seniority_id,
-                seniorities!inner(seniority_level)
+                seniorities(seniority_level)
             """
             )
             .neq("id", exclude_staffer_id)
+            .execute()
         )
 
-        result = query.execute()
+        if not staffers_result.data:
+            return []
+
+        # Parse the time period for comparison
+        try:
+            from datetime import date
+
+            if isinstance(start_date, str):
+                check_start_dt = datetime.fromisoformat(
+                    start_date.replace("Z", "+00:00")
+                ).date()
+            elif isinstance(start_date, date):
+                check_start_dt = start_date
+            else:
+                print(f"Warning: Invalid start_date format: {start_date}")
+                return []
+
+            if isinstance(end_date, str):
+                check_end_dt = datetime.fromisoformat(
+                    end_date.replace("Z", "+00:00")
+                ).date()
+            elif isinstance(end_date, date):
+                check_end_dt = end_date
+            else:
+                print(f"Warning: Invalid end_date format: {end_date}")
+                return []
+        except Exception as date_error:
+            print(f"Error parsing availability check dates: {date_error}")
+            return []
 
         available_staffers = []
-        if result.data:
-            for staffer in result.data:
-                # If skills are required, check if staffer has them
-                if required_skills:
-                    skills_result = (
-                        supabase_client.table("staffer_skills")
-                        .select("skills!inner(skill_name)")
-                        .eq("staffer_id", staffer["id"])
+
+        for staffer in staffers_result.data:
+            staffer_id = staffer["id"]
+
+            # Check if this staffer has any conflicting time off
+            time_off_result = (
+                supabase_client.table("staffer_time_off")
+                .select("time_off_start_datetime, time_off_end_datetime")
+                .eq("staffer_id", staffer_id)
+                .execute()
+            )
+
+            has_conflict = False
+            if time_off_result.data:
+                for time_off in time_off_result.data:
+                    try:
+                        pto_start = time_off.get("time_off_start_datetime")
+                        pto_end = time_off.get("time_off_end_datetime")
+
+                        if pto_start and pto_end:
+                            # Parse PTO dates
+                            if isinstance(pto_start, str):
+                                pto_start_dt = datetime.fromisoformat(
+                                    pto_start.replace("Z", "+00:00")
+                                ).date()
+                            elif isinstance(pto_start, date):
+                                pto_start_dt = pto_start
+                            else:
+                                continue
+
+                            if isinstance(pto_end, str):
+                                pto_end_dt = datetime.fromisoformat(
+                                    pto_end.replace("Z", "+00:00")
+                                ).date()
+                            elif isinstance(pto_end, date):
+                                pto_end_dt = pto_end
+                            else:
+                                continue
+
+                            # Check for overlap
+                            if not (
+                                pto_end_dt < check_start_dt
+                                or pto_start_dt > check_end_dt
+                            ):
+                                has_conflict = True
+                                break
+
+                    except Exception as pto_date_error:
+                        print(
+                            f"Warning: Error parsing PTO dates for staffer {staffer_id}: {pto_date_error}"
+                        )
+                        continue
+
+            # If no PTO conflict, check team membership
+            if not has_conflict:
+                # If project IDs are specified, check if staffer is on any of those project teams
+                is_on_project_team = True  # Default to True if no project filtering
+                if project_ids:
+                    team_membership_result = (
+                        supabase_client.table("project_team_memberships")
+                        .select("project_team_id, project_teams!inner(project_id)")
+                        .eq("staffer_id", staffer_id)
+                        .in_("project_teams.project_id", project_ids)
                         .execute()
                     )
 
-                    staffer_skills = [
-                        s["skills"]["skill_name"] for s in skills_result.data or []
-                    ]
-                    has_required_skills = any(
-                        skill in staffer_skills for skill in required_skills
-                    )
+                    is_on_project_team = bool(team_membership_result.data)
 
-                    if not has_required_skills:
-                        continue
-
-                available_staffers.append(
-                    StafferInfo(
-                        staffer_id=staffer["id"],
-                        first_name=staffer["first_name"],
-                        last_name=staffer["last_name"],
-                        title=staffer["title"],
-                        capacity=staffer["capacity"],
-                        time_zone=staffer.get("time_zone"),
-                        seniority_level=(
-                            staffer["seniorities"]["seniority_level"]
-                            if staffer.get("seniorities")
-                            else None
-                        ),
+                # Only add if staffer is on the relevant project team(s)
+                if is_on_project_team:
+                    available_staffers.append(
+                        StafferInfo(
+                            staffer_id=staffer["id"],
+                            first_name=staffer["first_name"],
+                            last_name=staffer["last_name"],
+                            title=staffer["title"],
+                            capacity=staffer["capacity"],
+                            time_zone=staffer.get("time_zone"),
+                            seniority_level=(
+                                staffer["seniorities"]["seniority_level"]
+                                if staffer.get("seniorities") and staffer["seniorities"]
+                                else None
+                            ),
+                        )
                     )
-                )
 
         # Sort by seniority and capacity for better matching
         available_staffers.sort(
@@ -382,26 +466,51 @@ def find_available_staffers(
         return []
 
 
+@function_tool
+def get_project_ids_from_tasks(task_assignments: List[TaskAssignment]) -> List[str]:
+    """
+    Extract unique project IDs from a list of task assignments.
+
+    Args:
+        task_assignments: List of TaskAssignment objects
+
+    Returns:
+        List of unique project IDs
+    """
+    project_ids = list(
+        set(task.project_id for task in task_assignments if task.project_id)
+    )
+    return project_ids
+
+
 # System Prompt for Resource Management Agent
 RESOURCE_MANAGEMENT_PROMPT = """
 You are a resource management specialist focused on handling staffer time-off scenarios and task reassignments.
 
 When a staffer takes time off, your job is to:
 1. Identify affected task assignments that overlap with the time-off period
-2. Find suitable replacement staffers based on skills, capacity, and availability
+2. Find suitable replacement staffers who are available (no PTO conflicts) and on the same project teams
 3. **CLEARLY INDICATE which staffers should be assigned to which specific tasks**
 4. Provide structured responses with explicit assignment recommendations
+
+CRITICAL WORKFLOW:
+1. First, get the affected task assignments for the staffer
+2. Extract the project IDs from those tasks using get_project_ids_from_tasks
+3. Find available staffers using those project IDs to ensure team membership
+4. Create specific NewTaskAssignment recommendations with UUIDs
 
 CRITICAL: Your response must explicitly indicate assignment intentions using the structured models:
 - Use NewTaskAssignment objects to specify exactly which staffer should take over which task
 - Include clear reasoning in the assignment_reason field
 - Provide confidence scores for each recommended assignment
+- Include both original_staffer_id and new_staffer_id (UUIDs) in assignments
 - If no suitable replacement is found, clearly state this in warnings
 
 Key principles:
+- **ONLY suggest staffers who are on the same project teams as the affected tasks**
 - Prioritize task continuity and project deadlines
-- Match staffers based on skills, seniority, and capacity
-- Consider time zones and existing workload
+- Ensure no PTO conflicts for replacement staffers
+- Consider seniority, capacity, and time zones
 - **Always populate the new_assignments list with specific assignment recommendations**
 - Provide confidence scores for assignment recommendations (0.0 to 1.0)
 - Always use structured database tools to gather current information
@@ -409,17 +518,17 @@ Key principles:
 
 Assignment Decision Making:
 - For each affected task, determine if a replacement staffer should be assigned
-- If yes: Create a NewTaskAssignment with original staffer, new staffer, and clear reasoning
+- If yes: Create a NewTaskAssignment with original staffer UUID, new staffer UUID, and clear reasoning
 - If no suitable replacement: Document this in warnings with explanation
-- Consider staffer availability, skills match, and project team membership
+- Consider staffer availability, project team membership, and capacity
 
 You have access to database tools to:
 - Find staffers by name
 - Get affected task assignments
-- Find available replacement staffers  
-- Create and remove task assignments
+- Extract project IDs from task assignments
+- Find available replacement staffers (filtered by project team membership)
 
-Always provide actionable assignment recommendations with clear reasoning and confidence scores.
+Always provide actionable assignment recommendations with clear reasoning, confidence scores, and proper UUIDs.
 """
 
 # Create the resource management agent using OpenAI Agents SDK
@@ -429,6 +538,7 @@ resource_management_agent = Agent(
     tools=[
         find_staffer_by_name,
         get_staffer_task_assignments,
+        get_project_ids_from_tasks,
         find_available_staffers,
     ],
 )
@@ -466,11 +576,13 @@ async def handle_resource_management(
         time_off_request = TimeOffRequest(**time_off_data)
 
         # Emit event for starting time-off processing
-        await event_bus.emit(BusinessEvent(
-            type=BusinessEventType.UPDATE,
-            message=f"Processing time-off request for {time_off_request.staffer_name} from {time_off_request.start_datetime} to {time_off_request.end_datetime}",
-            agent_id=AgentType.RESOURCE_MANAGEMENT
-        ))
+        await event_bus.emit(
+            BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Processing time-off request for {time_off_request.staffer_name} from {time_off_request.start_datetime} to {time_off_request.end_datetime}",
+                agent_id=AgentType.RESOURCE_MANAGEMENT,
+            )
+        )
 
         # Convert time_off_data to a formatted message string
         time_off_message = f"""
@@ -516,18 +628,22 @@ async def handle_resource_management(
 
         # Emit events for suggested reassignments
         for assignment in response.new_assignments:
-            await event_bus.emit(BusinessEvent(
-                type=BusinessEventType.UPDATE,
-                message=f"Suggested reassignment: Task '{assignment.task_name}' from {assignment.original_staffer_name} to {assignment.new_staffer_name} (Confidence: {assignment.confidence_score})",
-                agent_id=AgentType.RESOURCE_MANAGEMENT
-            ))
+            await event_bus.emit(
+                BusinessEvent(
+                    type=BusinessEventType.UPDATE,
+                    message=f"Suggested reassignment: Task '{assignment.task_name}' from {assignment.original_staffer_name} to {assignment.new_staffer_name} (Confidence: {assignment.confidence_score})",
+                    agent_id=AgentType.RESOURCE_MANAGEMENT,
+                )
+            )
 
         # Emit event for completing time-off processing
-        await event_bus.emit(BusinessEvent(
-            type=BusinessEventType.UPDATE,
-            message=f"Completed processing time-off request for {time_off_request.staffer_name}. Found {len(response.new_assignments)} task reassignments.",
-            agent_id=AgentType.RESOURCE_MANAGEMENT
-        ))
+        await event_bus.emit(
+            BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Completed processing time-off request for {time_off_request.staffer_name}. Found {len(response.new_assignments)} task reassignments.",
+                agent_id=AgentType.RESOURCE_MANAGEMENT,
+            )
+        )
 
         return response
 
@@ -541,10 +657,12 @@ async def handle_resource_management(
         )
 
         # Emit error event
-        await event_bus.emit(BusinessEvent(
-            type=BusinessEventType.ERROR,
-            message=f"Error processing time-off request: {str(e)}",
-            agent_id=AgentType.RESOURCE_MANAGEMENT
-        ))
+        await event_bus.emit(
+            BusinessEvent(
+                type=BusinessEventType.ERROR,
+                message=f"Error processing time-off request: {str(e)}",
+                agent_id=AgentType.RESOURCE_MANAGEMENT,
+            )
+        )
 
         return error_response
