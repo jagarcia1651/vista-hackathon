@@ -1,12 +1,8 @@
-export type BusinessEventType =
-   | "STAFF_REASSIGNMENT"
-   | "PTO_CONFLICT"
-   | "TASK_REASSIGNMENT"
-   | "CHAT_MESSAGE";
+export type BusinessEventType = "TEST";
 
 export type BusinessEvent = {
    type: BusinessEventType;
-   data: any;
+   message: string;
    agent_id: string;
    timestamp: string;
 };
