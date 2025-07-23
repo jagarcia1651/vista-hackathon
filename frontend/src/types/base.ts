@@ -20,11 +20,11 @@ export enum ProjectStatus {
 }
 
 export enum TaskStatus {
-   NOT_STARTED = "not_started",
-   IN_PROGRESS = "in_progress",
-   REVIEW = "review",
-   COMPLETED = "completed",
-   BLOCKED = "blocked"
+   TODO = "To Do",
+   IN_PROGRESS_ON_TRACK = "In Progress - On Track",
+   IN_PROGRESS_OFF_TRACK = "In Progress - Off Track",
+   COMPLETED = "Completed",
+   CANCELLED = "Cancelled"
 }
 
 export enum QuoteStatus {

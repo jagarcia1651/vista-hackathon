@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { ProjectTask } from "@/types/project";
+import { TaskStatus } from "@/types/base";
 
 interface TasksGridProps {
    tasks: ProjectTask[];
@@ -33,15 +34,17 @@ function formatDate(dateString: string): string {
 }
 
 export function TasksGrid({ tasks, onEdit, onDelete }: TasksGridProps) {
-   const getStatusColor = (status: string) => {
-      switch (status.toLowerCase()) {
-         case "not_started":
+   const getStatusColor = (status: TaskStatus) => {
+      switch (status) {
+         case TaskStatus.TODO:
             return "bg-slate-100 text-slate-800";
-         case "in_progress":
+         case TaskStatus.IN_PROGRESS_ON_TRACK:
             return "bg-blue-100 text-blue-800";
-         case "completed":
+         case TaskStatus.IN_PROGRESS_OFF_TRACK:
+            return "bg-orange-100 text-orange-800";
+         case TaskStatus.COMPLETED:
             return "bg-green-100 text-green-800";
-         case "blocked":
+         case TaskStatus.CANCELLED:
             return "bg-red-100 text-red-800";
          default:
             return "bg-gray-100 text-gray-800";
@@ -104,7 +107,7 @@ export function TasksGrid({ tasks, onEdit, onDelete }: TasksGridProps) {
                         <td className="px-4 py-3">
                            <span
                               className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
-                                 task.project_task_status
+                                 task.project_task_status as TaskStatus
                               )}`}
                            >
                               {task.project_task_status}

@@ -16,6 +16,7 @@ import { taskService } from "../services/taskService";
 import { assignmentService } from "../services/assignmentService";
 import { teamService } from "../services/teamService";
 import { X } from "lucide-react";
+import { TaskStatus } from "@/types/base";
 
 interface TaskModalProps {
    projectId: string;
@@ -281,19 +282,31 @@ export function TaskModal({
                         <label className="text-sm font-medium">Status</label>
                         <select
                            className="w-full px-3 py-2 border rounded-md"
-                           value={formData.project_task_status || "not_started"}
+                           value={
+                              formData.project_task_status || TaskStatus.TODO
+                           }
                            onChange={e =>
                               setFormData({
                                  ...formData,
-                                 project_task_status: e.target.value
+                                 project_task_status: e.target
+                                    .value as TaskStatus
                               })
                            }
                            required
                         >
-                           <option value="not_started">Not Started</option>
-                           <option value="in_progress">In Progress</option>
-                           <option value="completed">Completed</option>
-                           <option value="blocked">Blocked</option>
+                           <option value={TaskStatus.TODO}>To Do</option>
+                           <option value={TaskStatus.IN_PROGRESS_ON_TRACK}>
+                              In Progress - On Track
+                           </option>
+                           <option value={TaskStatus.IN_PROGRESS_OFF_TRACK}>
+                              In Progress - Off Track
+                           </option>
+                           <option value={TaskStatus.COMPLETED}>
+                              Completed
+                           </option>
+                           <option value={TaskStatus.CANCELLED}>
+                              Cancelled
+                           </option>
                         </select>
                      </div>
 

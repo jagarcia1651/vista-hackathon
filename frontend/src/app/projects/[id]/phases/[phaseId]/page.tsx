@@ -12,6 +12,7 @@ import { taskService } from "@/app/projects/services/taskService";
 import { teamService } from "@/app/projects/services/teamService";
 import { TasksGrid } from "@/app/projects/components/TasksGrid";
 import { TaskModal } from "@/app/projects/components/TaskModal";
+import { TaskStatus } from "@/types/base";
 
 type PageParams = {
    id: string;
@@ -78,7 +79,7 @@ export default function PhaseDetailPage({
    const calculateProgress = (tasks: any[]) => {
       if (!tasks || tasks.length === 0) return 0;
       const completedTasks = tasks.filter(
-         task => task.project_task_status === "completed"
+         task => task.project_task_status === TaskStatus.COMPLETED
       ).length;
       return Math.round((completedTasks / tasks.length) * 100);
    };
@@ -276,7 +277,9 @@ export default function PhaseDetailPage({
                         <div className="text-2xl font-bold">
                            {
                               phase.tasks.filter(
-                                 t => t.project_task_status === "completed"
+                                 t =>
+                                    t.project_task_status ===
+                                    TaskStatus.COMPLETED
                               ).length
                            }{" "}
                            / {phase.tasks.length}

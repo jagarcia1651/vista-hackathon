@@ -4,6 +4,7 @@ import type {
    ProjectTask,
    Project
 } from "../../../../shared/schemas/typescript/project";
+import { TaskStatus } from "@/types/base";
 
 interface ProjectTaskWithProject extends ProjectTask {
    project: Pick<Project, "project_name">;
@@ -37,14 +38,18 @@ export default async function ProjectTasks() {
       .order("project_task_due_date", { ascending: true })
       .limit(4)) as { data: ProjectTaskWithProject[] | null };
 
-   const getStatusColor = (status: string) => {
-      switch (status.toLowerCase()) {
-         case "in_progress":
+   const getStatusColor = (status: TaskStatus) => {
+      switch (status) {
+         case TaskStatus.IN_PROGRESS_ON_TRACK:
             return "bg-blue-100 text-blue-800";
-         case "completed":
+         case TaskStatus.IN_PROGRESS_OFF_TRACK:
+            return "bg-orange-100 text-orange-800";
+         case TaskStatus.COMPLETED:
             return "bg-green-100 text-green-800";
-         case "queued":
+         case TaskStatus.TODO:
             return "bg-gray-100 text-gray-800";
+         case TaskStatus.CANCELLED:
+            return "bg-red-100 text-red-800";
          default:
             return "bg-yellow-100 text-yellow-800";
       }
@@ -78,7 +83,7 @@ export default async function ProjectTasks() {
                      <div className="flex items-center gap-4">
                         <span
                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              task.project_task_status
+                              task.project_task_status as TaskStatus
                            )}`}
                         >
                            {task.project_task_status}

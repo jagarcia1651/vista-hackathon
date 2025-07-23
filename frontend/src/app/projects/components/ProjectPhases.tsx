@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, CheckCircle2, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ProjectPhaseWithTasks } from "@/types/project";
+import { TaskStatus } from "@/types/base";
 
 interface ProjectPhasesProps {
    projectId: string;
@@ -21,9 +22,13 @@ export function ProjectPhases({
 
    const getStatusBadge = (status: string) => {
       switch (status.toLowerCase()) {
-         case "completed":
+         case TaskStatus.COMPLETED:
             return "bg-black text-white";
-         case "in_progress":
+         case TaskStatus.IN_PROGRESS_ON_TRACK:
+            return "bg-blue-100 text-blue-800";
+         case TaskStatus.IN_PROGRESS_OFF_TRACK:
+            return "bg-red-100 text-red-800";
+         case TaskStatus.TODO:
             return "bg-gray-100 text-gray-800";
          default:
             return "bg-gray-50 text-gray-800";
@@ -32,12 +37,16 @@ export function ProjectPhases({
 
    const getStatusLabel = (status: string) => {
       switch (status.toLowerCase()) {
-         case "completed":
+         case TaskStatus.COMPLETED:
             return "Completed";
-         case "in_progress":
-            return "In Progress";
+         case TaskStatus.IN_PROGRESS_ON_TRACK:
+            return "In Progress - On Track";
+         case TaskStatus.IN_PROGRESS_OFF_TRACK:
+            return "In Progress - Off Track";
+         case TaskStatus.CANCELLED:
+            return "Cancelled";
          default:
-            return "Not Started";
+            return "To Do";
       }
    };
 
@@ -137,7 +146,8 @@ export function ProjectPhases({
                                     className="flex items-center gap-2"
                                  >
                                     {getTaskIcon(
-                                       task.project_task_status === "completed"
+                                       task.project_task_status ===
+                                          TaskStatus.COMPLETED
                                     )}
                                     <div className="flex-1 min-w-0">
                                        <div
