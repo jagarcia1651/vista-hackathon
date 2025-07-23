@@ -1,4 +1,4 @@
-export type BusinessEventType = "TEST" | "ERROR";
+export type BusinessEventType = "TEST" | "ERROR" | "UPDATE";
 
 export type AgentType =
    | "ORCHESTRATOR"

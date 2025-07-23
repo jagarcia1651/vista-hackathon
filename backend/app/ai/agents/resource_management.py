@@ -6,6 +6,7 @@ from agents import Agent, function_tool
 from pydantic import BaseModel, Field
 
 from ...utils.supabase_client import supabase_client
+from ...events.bus import event_bus, BusinessEvent, BusinessEventType, AgentType
 
 
 # Pydantic Models for Structured Input/Output
@@ -421,6 +422,13 @@ async def handle_resource_management(
         # Parse input data into structured model
         time_off_request = TimeOffRequest(**time_off_data)
 
+        # Emit event for starting time-off processing
+        await event_bus.emit(BusinessEvent(
+            type=BusinessEventType.UPDATE,
+            message=f"Processing time-off request for {time_off_request.staffer_name} from {time_off_request.start_datetime} to {time_off_request.end_datetime}",
+            agent_id=AgentType.RESOURCE_MANAGEMENT
+        ))
+
         # Convert time_off_data to a formatted message string
         time_off_message = f"""
         Process this time-off request and handle task reassignments:
@@ -454,8 +462,7 @@ async def handle_resource_management(
         )
 
         # Parse the result into the structured response format
-        # Note: This would need to be adapted based on the actual OpenAI Agents SDK response format
-        return ResourceManagementResponse(
+        response = ResourceManagementResponse(
             success=True,
             message=str(result),
             affected_tasks_count=0,  # This would be parsed from the actual response
@@ -464,11 +471,37 @@ async def handle_resource_management(
             recommendations=[],
         )
 
+        # Emit events for suggested reassignments
+        for assignment in response.new_assignments:
+            await event_bus.emit(BusinessEvent(
+                type=BusinessEventType.UPDATE,
+                message=f"Suggested reassignment: Task '{assignment.task_name}' from {assignment.original_staffer_name} to {assignment.new_staffer_name} (Confidence: {assignment.confidence_score})",
+                agent_id=AgentType.RESOURCE_MANAGEMENT
+            ))
+
+        # Emit event for completing time-off processing
+        await event_bus.emit(BusinessEvent(
+            type=BusinessEventType.UPDATE,
+            message=f"Completed processing time-off request for {time_off_request.staffer_name}. Found {len(response.new_assignments)} task reassignments.",
+            agent_id=AgentType.RESOURCE_MANAGEMENT
+        ))
+
+        return response
+
     except Exception as e:
-        return ResourceManagementResponse(
+        error_response = ResourceManagementResponse(
             success=False,
             message=f"Error in resource management: {str(e)}",
             affected_tasks_count=0,
             new_assignments=[],
             warnings=[f"Processing error: {str(e)}"],
         )
+
+        # Emit error event
+        await event_bus.emit(BusinessEvent(
+            type=BusinessEventType.ERROR,
+            message=f"Error processing time-off request: {str(e)}",
+            agent_id=AgentType.RESOURCE_MANAGEMENT
+        ))
+
+        return error_response

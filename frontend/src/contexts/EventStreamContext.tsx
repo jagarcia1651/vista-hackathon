@@ -90,7 +90,7 @@ export const EventStreamProvider = ({ children }: { children: ReactNode }) => {
             const data = JSON.parse(event.data);
 
             // Handle the event based on its type
-            if (data.type === "TEST") {
+            if (data.type === "TEST" || data.type === "UPDATE") {
                // Add the event to our state
                setEvents(prev => [
                   ...prev,
