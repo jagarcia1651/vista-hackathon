@@ -6,6 +6,26 @@ from pydantic import BaseModel, Field
 
 from ..utils.supabase_client import supabase_client
 
+profitability_sql_query = """
+SELECT
+  SUM((staffer_billable - staffer_cost)::numeric)::money AS total_profitability
+FROM (
+  SELECT
+    staffer_rates.staffer_id,
+    (staffer_rates.bill_rate * SUM(project_tasks.estimated_hours)) AS staffer_billable,
+    (staffer_rates.cost_rate * SUM(project_tasks.estimated_hours)) AS staffer_cost
+  FROM staffer_rates
+  LEFT JOIN staffer_assignments
+    ON staffer_assignments.staffer_id = staffer_rates.staffer_id
+  LEFT JOIN project_tasks
+    ON project_tasks.project_task_id = staffer_assignments.project_task_id
+  LEFT JOIN projects
+    ON projects.project_id = project_tasks.project_id
+  WHERE projects.project_id = @project_id
+  GROUP BY staffer_rates.staffer_id, staffer_rates.bill_rate, staffer_rates.cost_rate, projects.project_id
+) AS sub;
+"""
+
 
 # Profitability Models
 class ProfitabilitySnapshot(BaseModel):
@@ -107,9 +127,11 @@ class ProfitabilityService:
             if not supabase_client:
                 raise Exception("Database connection not available")
 
-            response = supabase_client.functions.invoke(
-                "get-total-profitability",
-                invoke_options={"body": {"project_id": project_id}},
+            result = (
+                supabase_client.table("project_profitability_view")
+                .select("*")
+                .eq("project_id", project_id)
+                .execute()
             )
 
             if response and hasattr(response, "data") and response.data is not None:
@@ -133,8 +155,8 @@ class ProfitabilityService:
 
     @staticmethod
     def create_snapshot_from_project_id(
-        project_id: uuid,
-        baseline_id: Optional[str] = None,
+        project_id: UUID,
+        baseline_id: Optional[UUID] = None,
         triggered_by_agent: Optional[str] = None,
         triggered_by_action: Optional[str] = None,
     ) -> SnapshotResponse:

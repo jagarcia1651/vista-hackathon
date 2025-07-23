@@ -4,7 +4,7 @@ Project Task Service - CRUD operations for project_tasks table using Supabase
 
 from datetime import datetime
 from typing import List, Optional
-from uuid import uuid4
+from uuid import UUID
 
 from ..models.project import (
     DatabaseResponse,

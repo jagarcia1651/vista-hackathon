@@ -4,7 +4,7 @@ Project Service - CRUD operations for projects table using Supabase
 
 from datetime import datetime
 from typing import List, Optional
-from uuid import uuid4
+from uuid import UUID
 
 from ..models.project import (
     DatabaseResponse,
