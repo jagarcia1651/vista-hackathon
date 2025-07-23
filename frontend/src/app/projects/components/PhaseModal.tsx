@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProjectPhase } from "@/types/project";
 import { phaseService } from "../services/phaseService";
 import { TeamAssignmentSection } from "./TeamAssignmentSection";
+import { teamService } from "../services/teamService";
 
 type PhaseStatus =
    | "Planned"
@@ -133,9 +134,18 @@ export function PhaseModal({
 
       try {
          if (isEditing && phase) {
+            // Only include fields that exist in the project_phases table
+            const phaseUpdate = {
+               project_phase_name: formData.project_phase_name,
+               project_phase_description: formData.project_phase_description,
+               project_phase_status: formData.project_phase_status,
+               project_phase_start_date: formData.project_phase_start_date,
+               project_phase_due_date: formData.project_phase_due_date
+            };
+
             const { error: updateError } = await phaseService.updatePhase(
                phase.project_phase_id,
-               formData
+               phaseUpdate
             );
             if (updateError) throw updateError;
          } else {
@@ -154,10 +164,22 @@ export function PhaseModal({
                project_phase_due_date: formData.project_phase_due_date!
             };
 
-            const { error: createError } = await phaseService.createPhase(
-               newPhase
-            );
+            const { data: createdPhase, error: createError } =
+               await phaseService.createPhase(newPhase);
             if (createError) throw createError;
+
+            // Create an empty team for the phase if it was created successfully
+            if (createdPhase) {
+               const { error: teamError } = await teamService.createTeam({
+                  project_id: projectId,
+                  project_phase_id: createdPhase.project_phase_id,
+                  project_team_name: `${createdPhase.project_phase_name} Team`
+               });
+               if (teamError) {
+                  console.error("Error creating team:", teamError);
+                  // Don't throw here - we still created the phase successfully
+               }
+            }
          }
 
          onSuccess();
@@ -275,15 +297,13 @@ export function PhaseModal({
                      </div>
                   </div>
 
-                  {isEditing && (
-                     <div className="space-y-2">
-                        <h3 className="text-sm font-medium">Team Assignment</h3>
-                        <TeamAssignmentSection
-                           projectId={projectId}
-                           phaseId={phase?.project_phase_id}
-                        />
-                     </div>
-                  )}
+                  <div className="space-y-2">
+                     <h3 className="text-sm font-medium">Team Assignment</h3>
+                     <TeamAssignmentSection
+                        projectId={projectId}
+                        phaseId={phase?.project_phase_id}
+                     />
+                  </div>
 
                   <div className="flex justify-end gap-3">
                      <Button

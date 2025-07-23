@@ -27,7 +27,7 @@ export const teamService = {
    },
 
    async getTeamByPhase(phaseId: string) {
-      return supabase
+      const { data, error } = await supabase
          .from("project_teams")
          .select(
             `
@@ -45,7 +45,14 @@ export const teamService = {
       `
          )
          .eq("project_phase_id", phaseId)
-         .single();
+         .maybeSingle(); // Use maybeSingle instead of single to handle no results
+
+      if (error && error.code !== "PGRST116") {
+         // PGRST116 is the "no results" error code
+         throw error;
+      }
+
+      return { data, error: null };
    },
 
    async createTeam(
