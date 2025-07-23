@@ -25,7 +25,7 @@ export function TimeOffForm({
    onCancel,
    onApply,
 }: TimeOffFormProps) {
-   // Function to calculate weekdays between two dates
+   // Function to calculate weekdays between two dates (inclusive of both start and end dates)
    const calculateWeekdays = (startDate: string, endDate: string): number => {
       if (!startDate || !endDate) return 0;
 
@@ -34,16 +34,19 @@ export function TimeOffForm({
 
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
       if (start > end) return 0;
+      if (start == end && start.getDay() >= 1 && start.getDay() <= 5) return 8;
 
       let weekdays = 0;
       const current = new Date(start);
 
+      // Loop through each day from start to end (inclusive)
       while (current <= end) {
          const dayOfWeek = current.getDay();
-         // Monday = 1, Tuesday = 2, ..., Friday = 5
+         // Count weekdays: Monday = 1, Tuesday = 2, ..., Friday = 5
          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
             weekdays++;
          }
+         // Move to next day
          current.setDate(current.getDate() + 1);
       }
 
