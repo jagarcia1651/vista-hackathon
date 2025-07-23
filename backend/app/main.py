@@ -9,11 +9,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from .agents.orchestrator import run as orchestrator_run
-from .agents.project_management import (
+from .ai.agents.orchestrator import run as orchestrator_run
+from .ai.agents.project_management import (
     analyze_project_health,
     create_comprehensive_project_plan,
-    project_management_agent,
+    handle_project_management,
 )
 from .config import agent_config, app_config
 from .events.bus import BusinessEvent, event_bus
@@ -36,6 +36,14 @@ app.add_middleware(
 class AgentQueryRequest(BaseModel):
     query: str
     context: Optional[Dict[str, Any]] = None
+
+
+# Pydantic models for API responses
+class ChatResponse(BaseModel):
+    response: str
+    status: str
+    orchestrator: Optional[str] = None
+    error: Optional[str] = None
 
 
 class ProjectPlanRequest(BaseModel):
@@ -94,13 +102,21 @@ async def root():
 
 # Agent API endpoints
 @app.post("/api/v1/agent/query")
-async def agent_query(request: AgentQueryRequest):
+async def agent_query(request: AgentQueryRequest) -> ChatResponse:
     """
     General agent query endpoint - orchestrator determines which agents to use
     """
-    # Just trigger the orchestrator and return immediately
-    asyncio.create_task(orchestrator_run(request.query))
-    return {"status": "processing"}
+    try:
+        # Run the orchestrator and wait for the result
+        result = await orchestrator_run(request.query)
+
+        return ChatResponse(
+            response=result, status="success", orchestrator="main_orchestrator"
+        )
+    except Exception as e:
+        return ChatResponse(
+            response="", status="error", error=f"Error processing query: {str(e)}"
+        )
 
 
 @app.post("/api/v1/agent/project-plan")
@@ -142,7 +158,7 @@ async def project_management_query(request: ProjectManagementRequest):
     Handle project management queries with database integration
     """
     try:
-        result = project_management_agent(request.query, request.project_context)
+        result = await handle_project_management(request.query, request.project_context)
         return {
             "response": result,
             "agent": "project_management",
@@ -266,8 +282,8 @@ async def subscribe_to_events():
                     "data": json.dumps(
                         {
                             "type": event.type.value,
-                            "data": event.data,
-                            "agent_id": event.agent_id,
+                            "message": event.message,
+                            "agent_id": event.agent_id.value,
                             "timestamp": event.timestamp.isoformat(),
                         }
                     ),
@@ -278,8 +294,9 @@ async def subscribe_to_events():
                         data = {
                             "type": event.type.value,
                             "agent_id": event.agent_id.value,
-                            "timestamp": event.timestamp.isoformat() + "Z",  # Explicitly mark as UTC
-                            "message": event.message
+                            "timestamp": event.timestamp.isoformat()
+                            + "Z",  # Explicitly mark as UTC
+                            "message": event.message,
                         }
                         yield {
                             "event": "message",

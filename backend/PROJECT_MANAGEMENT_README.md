@@ -128,7 +128,7 @@ def get_project_details(project_id: str) -> ProjectDetailsResponse:
 
 ```python
 from app.models.project import ProjectCreateRequest
-from app.agents.project_management import create_project_record
+from app.ai.agents.project_management import create_project_record
 
 # Create structured request
 project_request = ProjectCreateRequest(
@@ -159,7 +159,7 @@ else:
 ### Analyzing Project with Structured Response
 
 ```python
-from app.agents.project_management import get_project_details
+from app.ai.agents.project_management import get_project_details
 
 # Get structured project details
 details = get_project_details("project-uuid-here")

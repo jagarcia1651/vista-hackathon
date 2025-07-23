@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from strands import Agent, tool
-from strands.models.bedrock import BedrockModel
+from agents import Agent, function_tool
+from pydantic import BaseModel
 
-from ..models.project import (
+from ...models.project import (
     ClientsResponse,
     DatabaseResponse,
     Project,
@@ -28,9 +28,9 @@ from ..models.project import (
     TaskResponse,
     TaskStatus,
 )
-from ..services.projectService import ProjectService
-from ..services.projectTaskService import ProjectTaskService
-from ..utils.supabase_client import supabase_client
+from ...services.projectService import ProjectService
+from ...services.projectTaskService import ProjectTaskService
+from ...utils.supabase_client import supabase_client
 
 # Enhanced Project Management System Prompt
 PROJECT_MANAGEMENT_PROMPT = """
@@ -90,23 +90,8 @@ For task management, leverage the ProjectTaskService tools to provide real-time 
 """
 
 
-def _create_bedrock_model():
-    """Create BedrockModel with API key or AWS credentials"""
-    api_key = os.getenv("AWS_BEARER_TOKEN_BEDROCK")
-    model_id = os.getenv(
-        "BEDROCK_MODEL_ID", "us.anthropic.claude-3-haiku-20240307-v1:0"
-    )
-    region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-
-    if api_key:
-        # Use API key authentication
-        os.environ["AWS_BEARER_TOKEN_BEDROCK"] = api_key
-
-    return BedrockModel(model_id=model_id, region_name=region)
-
-
 # Database Tools for Project Management with Structured Types
-@tool
+@function_tool
 def create_project_record(
     project_name: str,
     client_id: str,
@@ -140,7 +125,7 @@ def create_project_record(
     return ProjectService.create_project(project_request)
 
 
-@tool
+@function_tool
 def update_project_record(
     project_id: str, updates: ProjectUpdateRequest
 ) -> ProjectResponse:
@@ -158,7 +143,7 @@ def update_project_record(
     return ProjectService.update_project_from_request(project_id, updates)
 
 
-@tool
+@function_tool
 def get_project_details(project_id: str) -> ProjectDetailsResponse:
     """
     Retrieve detailed project information with structured models using ProjectService.
@@ -202,7 +187,7 @@ def get_project_details(project_id: str) -> ProjectDetailsResponse:
         return ProjectDetailsResponse(success=False, error=f"Database error: {str(e)}")
 
 
-@tool
+@function_tool
 def create_project_task(task_request: ProjectTaskCreateRequest) -> TaskResponse:
     """
     Create a new project task using structured request model.
@@ -248,7 +233,7 @@ def create_project_task(task_request: ProjectTaskCreateRequest) -> TaskResponse:
         return TaskResponse(success=False, error=f"Database error: {str(e)}")
 
 
-@tool
+@function_tool
 def get_available_clients() -> ClientsResponse:
     """
     Retrieve list of available clients for project creation.
@@ -275,7 +260,7 @@ def get_available_clients() -> ClientsResponse:
 # Additional Project Management Tools using ProjectService
 
 
-@tool
+@function_tool
 def get_all_projects(limit: Optional[int] = None) -> Dict[str, Any]:
     """
     Retrieve all projects using the ProjectService.
@@ -298,7 +283,7 @@ def get_all_projects(limit: Optional[int] = None) -> Dict[str, Any]:
         return {"success": False, "error": f"Error retrieving all projects: {str(e)}"}
 
 
-@tool
+@function_tool
 def get_projects_by_client(client_id: str) -> Dict[str, Any]:
     """
     Retrieve all projects for a specific client using the ProjectService.
@@ -324,7 +309,7 @@ def get_projects_by_client(client_id: str) -> Dict[str, Any]:
         }
 
 
-@tool
+@function_tool
 def get_projects_by_status(
     status: str, client_id: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -361,7 +346,7 @@ def get_projects_by_status(
         }
 
 
-@tool
+@function_tool
 def get_active_projects() -> Dict[str, Any]:
     """
     Retrieve all active projects using the ProjectService.
@@ -383,7 +368,7 @@ def get_active_projects() -> Dict[str, Any]:
         }
 
 
-@tool
+@function_tool
 def get_overdue_projects() -> Dict[str, Any]:
     """
     Retrieve projects that are overdue using the ProjectService.
@@ -405,7 +390,7 @@ def get_overdue_projects() -> Dict[str, Any]:
         }
 
 
-@tool
+@function_tool
 def get_project_by_name(project_name: str, exact_match: bool = True) -> ProjectResponse:
     """
     Retrieve a project by its name using the ProjectService.
@@ -420,7 +405,7 @@ def get_project_by_name(project_name: str, exact_match: bool = True) -> ProjectR
     return ProjectService.get_project_by_name(project_name, exact_match)
 
 
-@tool
+@function_tool
 def search_projects(search_term: str) -> Dict[str, Any]:
     """
     Search projects by name using the ProjectService.
@@ -443,7 +428,7 @@ def search_projects(search_term: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Error searching projects: {str(e)}"}
 
 
-@tool
+@function_tool
 def update_project_status_tool(project_id: str, new_status: str) -> ProjectResponse:
     """
     Update the status of a project using the ProjectService.
@@ -470,7 +455,7 @@ def update_project_status_tool(project_id: str, new_status: str) -> ProjectRespo
         )
 
 
-@tool
+@function_tool
 def update_project_due_date_tool(
     project_id: str, due_date: Optional[str] = None
 ) -> ProjectResponse:
@@ -511,7 +496,7 @@ def update_project_due_date_tool(
 # Project Task Management Tools using ProjectTaskService
 
 
-@tool
+@function_tool
 def get_task_by_id(task_id: str) -> TaskResponse:
     """
     Retrieve a specific project task by its ID using the task service.
@@ -525,7 +510,7 @@ def get_task_by_id(task_id: str) -> TaskResponse:
     return ProjectTaskService.get_task_by_id(task_id)
 
 
-@tool
+@function_tool
 def get_task_by_name(
     task_name: str, exact_match: bool = True, project_id: Optional[str] = None
 ) -> TaskResponse:
@@ -543,7 +528,7 @@ def get_task_by_name(
     return ProjectTaskService.get_task_by_name(task_name, exact_match, project_id)
 
 
-@tool
+@function_tool
 def get_project_tasks(project_id: str) -> Dict[str, Any]:
     """
     Retrieve all tasks for a specific project using the task service.
@@ -565,7 +550,7 @@ def get_project_tasks(project_id: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Error retrieving tasks: {str(e)}"}
 
 
-@tool
+@function_tool
 def update_task_status(task_id: str, new_status: str) -> TaskResponse:
     """
     Update the status of a project task using the task service.
@@ -592,7 +577,7 @@ def update_task_status(task_id: str, new_status: str) -> TaskResponse:
         )
 
 
-@tool
+@function_tool
 def update_task_hours(
     task_id: str,
     estimated_hours: Optional[int] = None,
@@ -612,7 +597,7 @@ def update_task_hours(
     return ProjectTaskService.update_task_hours(task_id, estimated_hours, actual_hours)
 
 
-@tool
+@function_tool
 def update_task_details(
     task_id: str,
     task_name: Optional[str] = None,
@@ -649,7 +634,7 @@ def update_task_details(
     return ProjectTaskService.update_task(task_id, updates)
 
 
-@tool
+@function_tool
 def get_tasks_by_status(
     status: str, project_id: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -686,7 +671,7 @@ def get_tasks_by_status(
         }
 
 
-@tool
+@function_tool
 def get_overdue_tasks(project_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Retrieve tasks that are overdue using the task service.
@@ -709,7 +694,7 @@ def get_overdue_tasks(project_id: Optional[str] = None) -> Dict[str, Any]:
         return {"success": False, "error": f"Error retrieving overdue tasks: {str(e)}"}
 
 
-@tool
+@function_tool
 def analyze_project_status(project_id: str) -> Dict[str, Any]:
     """
     Analyze current project status using structured models and provide recommendations.
@@ -795,8 +780,44 @@ def analyze_project_status(project_id: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Analysis error: {str(e)}"}
 
 
-@tool
-def project_management_agent(query: str, project_context: Optional[str] = None) -> str:
+# Create the project management agent using OpenAI Agents SDK
+project_management_agent = Agent(
+    name="project_management_agent",
+    instructions=PROJECT_MANAGEMENT_PROMPT,
+    tools=[
+        # Core project CRUD operations using ProjectService
+        create_project_record,
+        update_project_record,
+        get_project_details,
+        create_project_task,
+        get_available_clients,
+        analyze_project_status,
+        # Additional project management tools using ProjectService
+        get_all_projects,
+        get_projects_by_client,
+        get_projects_by_status,
+        get_active_projects,
+        get_overdue_projects,
+        get_project_by_name,
+        search_projects,
+        update_project_status_tool,
+        update_project_due_date_tool,
+        # Task management tools using ProjectTaskService
+        get_task_by_id,
+        get_task_by_name,
+        get_project_tasks,
+        update_task_status,
+        update_task_hours,
+        update_task_details,
+        get_tasks_by_status,
+        get_overdue_tasks,
+    ],
+)
+
+
+async def handle_project_management(
+    query: str, project_context: Optional[str] = None
+) -> str:
     """
     Handle project management queries with structured models and database integration.
 
@@ -808,58 +829,26 @@ def project_management_agent(query: str, project_context: Optional[str] = None) 
         Structured project management response with actionable recommendations
     """
     try:
-        # Create specialized project management agent with structured tools
-        bedrock_model = _create_bedrock_model()
-
-        pm_agent = Agent(
-            model=bedrock_model,
-            system_prompt=PROJECT_MANAGEMENT_PROMPT,
-            tools=[
-                # Core project CRUD operations using ProjectService
-                create_project_record,
-                update_project_record,
-                get_project_details,
-                create_project_task,
-                get_available_clients,
-                analyze_project_status,
-                # Additional project management tools using ProjectService
-                get_all_projects,
-                get_projects_by_client,
-                get_projects_by_status,
-                get_active_projects,
-                get_overdue_projects,
-                get_project_by_name,
-                search_projects,
-                update_project_status_tool,
-                update_project_due_date_tool,
-                # Task management tools using ProjectTaskService
-                get_task_by_id,
-                get_task_by_name,
-                get_project_tasks,
-                update_task_status,
-                update_task_hours,
-                update_task_details,
-                get_tasks_by_status,
-                get_overdue_tasks,
-            ],
-        )
-
         # Enhance query with context if provided
         enhanced_query = query
         if project_context:
             enhanced_query = f"Project Context: {project_context}\n\nQuery: {query}"
 
-        # Get agent response
-        response = pm_agent(enhanced_query)
+        # Run the agent with the OpenAI Agents SDK
+        from agents import Runner
+
+        result = await Runner.run(agent=project_management_agent, input=enhanced_query)
 
         # Structure the response for consistency
-        return f"Project Management Analysis:\n{str(response)}"
+        return f"Project Management Analysis:\n{str(result)}"
 
     except Exception as e:
         return f"Error in project management agent: {str(e)}"
 
 
-def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str, Any]:
+async def create_comprehensive_project_plan(
+    project_data: Dict[str, Any],
+) -> Dict[str, Any]:
     """
     Create a comprehensive project plan using structured models and the enhanced agent
     """
@@ -895,7 +884,7 @@ def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str,
     Think through each step and use the available database tools with structured types to create the actual project structure.
     """
 
-    response = project_management_agent(query)
+    response = await handle_project_management(query)
 
     return {
         "project_plan": response,
@@ -906,7 +895,7 @@ def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str,
     }
 
 
-def analyze_project_health(project_id: str) -> Dict[str, Any]:
+async def analyze_project_health(project_id: str) -> Dict[str, Any]:
     """
     Comprehensive project health analysis using structured models and the enhanced agent
     """
@@ -924,7 +913,7 @@ def analyze_project_health(project_id: str) -> Dict[str, Any]:
     Use the database tools with structured types to get current project information and provide a detailed analysis.
     """
 
-    response = project_management_agent(
+    response = await handle_project_management(
         query, project_context=f"Project ID: {project_id}"
     )
 
