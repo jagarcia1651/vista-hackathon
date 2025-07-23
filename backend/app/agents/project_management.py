@@ -14,12 +14,9 @@ from strands.models.bedrock import BedrockModel
 from ..models.project import (
     ClientsResponse,
     DatabaseResponse,
-    PhaseCreateRequest,
-    PhaseResponse,
     Project,
     ProjectCreateRequest,
     ProjectDetailsResponse,
-    ProjectPhase,
     ProjectResponse,
     ProjectStatus,
     ProjectTask,
@@ -56,7 +53,7 @@ Project Management Capabilities:
 - Get projects by exact name or partial name match
 - Track project progress and identify overdue projects
 - Update project status and details
-- Get comprehensive project details with phases, tasks, and teams
+- Get comprehensive project details with tasks, and teams
 - Monitor all projects, active projects, or client-specific projects
 
 Task Management Capabilities:
@@ -65,7 +62,7 @@ Task Management Capabilities:
 - Track task status and progress (not_started, in_progress, review, completed, blocked)
 - Monitor estimated vs actual hours
 - Identify overdue tasks and bottlenecks
-- Filter tasks by status, project, or phase
+- Filter tasks by status, project
 - Update task details, dates, and assignments
 
 Real-time thinking examples you should demonstrate:
@@ -84,7 +81,7 @@ Real-time thinking examples you should demonstrate:
 - "Filtering projects by status to identify priorities..."
 
 Focus on providing actionable project management insights based on PSA best practices.
-Always structure your responses with clear phases, tasks, and timelines.
+Always structure your responses with clear tasks, and timelines.
 When working with database operations, confirm success and provide structured feedback.
 Use the structured models to ensure data consistency and type safety.
 For project management, leverage the ProjectService tools for all project-related operations.
@@ -184,17 +181,6 @@ def get_project_details(project_id: str) -> ProjectDetailsResponse:
             return ProjectDetailsResponse(success=False, error=project_response.error)
 
         project = project_response.project
-
-        # Get project phases
-        phases_result = (
-            supabase_client.table("project_phases")
-            .select("*")
-            .eq("project_id", project_id)
-            .order("project_phase_number")
-            .execute()
-        )
-        phases = [ProjectPhase(**phase) for phase in (phases_result.data or [])]
-
         # Get project tasks using ProjectTaskService
         tasks = ProjectTaskService.get_tasks_by_project(project_id)
 
@@ -208,56 +194,11 @@ def get_project_details(project_id: str) -> ProjectDetailsResponse:
         teams = [ProjectTeam(**team) for team in (teams_result.data or [])]
 
         return ProjectDetailsResponse(
-            success=True, project=project, phases=phases, tasks=tasks, teams=teams
+            success=True, project=project, phases=None, tasks=tasks, teams=teams
         )
 
     except Exception as e:
         return ProjectDetailsResponse(success=False, error=f"Database error: {str(e)}")
-
-
-@tool
-def create_project_phase(phase_request: PhaseCreateRequest) -> PhaseResponse:
-    """
-    Create a new project phase using structured request model.
-
-    Args:
-        phase_request: PhaseCreateRequest with phase details
-
-    Returns:
-        PhaseResponse with created phase data
-    """
-    try:
-        if not supabase_client:
-            return PhaseResponse(
-                success=False, error="Database connection not available"
-            )
-
-        phase_data = {
-            "project_id": phase_request.project_id,
-            "project_phase_name": phase_request.phase_name,
-            "project_phase_description": phase_request.phase_description,
-            "project_phase_number": phase_request.phase_number,
-            "project_phase_status": phase_request.phase_status,
-            "project_phase_start_date": phase_request.phase_start_date,
-            "project_phase_due_date": phase_request.phase_due_date,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_updated_at": datetime.utcnow().isoformat(),
-        }
-
-        result = supabase_client.table("project_phases").insert(phase_data).execute()
-
-        if result.data:
-            phase = ProjectPhase(**result.data[0])
-            return PhaseResponse(
-                success=True,
-                phase=phase,
-                message=f"Phase '{phase_request.phase_name}' created successfully",
-            )
-        else:
-            return PhaseResponse(success=False, error="Failed to create phase")
-
-    except Exception as e:
-        return PhaseResponse(success=False, error=f"Database error: {str(e)}")
 
 
 @tool
@@ -528,20 +469,6 @@ def update_project_status_tool(project_id: str, new_status: str) -> ProjectRespo
         )
 
 
-@tool
-def delete_project_tool(project_id: str) -> DatabaseResponse:
-    """
-    Delete a project using the ProjectService.
-
-    Args:
-        project_id: UUID of the project to delete
-
-    Returns:
-        DatabaseResponse indicating success or failure
-    """
-    return ProjectService.delete_project(project_id)
-
-
 # Project Task Management Tools using ProjectTaskService
 
 
@@ -597,28 +524,6 @@ def get_project_tasks(project_id: str) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"success": False, "error": f"Error retrieving tasks: {str(e)}"}
-
-
-@tool
-def get_phase_tasks(phase_id: str) -> Dict[str, Any]:
-    """
-    Retrieve all tasks for a specific project phase using the task service.
-
-    Args:
-        phase_id: UUID of the project phase
-
-    Returns:
-        Dictionary with tasks data and status
-    """
-    try:
-        tasks = ProjectTaskService.get_tasks_by_phase(phase_id)
-        return {
-            "success": True,
-            "tasks": [task.model_dump() for task in tasks],
-            "task_count": len(tasks),
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Error retrieving phase tasks: {str(e)}"}
 
 
 @tool
@@ -766,20 +671,6 @@ def get_overdue_tasks(project_id: Optional[str] = None) -> Dict[str, Any]:
 
 
 @tool
-def delete_task(task_id: str) -> DatabaseResponse:
-    """
-    Delete a project task using the task service.
-
-    Args:
-        task_id: UUID of the task to delete
-
-    Returns:
-        DatabaseResponse indicating success or failure
-    """
-    return ProjectTaskService.delete_task(task_id)
-
-
-@tool
 def analyze_project_status(project_id: str) -> Dict[str, Any]:
     """
     Analyze current project status using structured models and provide recommendations.
@@ -798,14 +689,12 @@ def analyze_project_status(project_id: str) -> Dict[str, Any]:
             return {"success": False, "error": project_details.error}
 
         project = project_details.project
-        phases = project_details.phases
         tasks = project_details.tasks
 
         # Analyze status using structured data
         analysis = {
             "project_name": project.project_name,
             "current_status": project.project_status,
-            "total_phases": len(phases),
             "total_tasks": len(tasks),
             "completed_tasks": len(
                 [t for t in tasks if t.project_task_status == "Completed"]
@@ -958,11 +847,10 @@ def create_comprehensive_project_plan(project_data: Dict[str, Any]) -> Dict[str,
 
     Please provide:
     1. Create the project record in the database using the structured models
-    2. Project phases breakdown with timeline
-    3. Key milestones and deliverables
-    4. Resource requirements analysis
-    5. Risk assessment and mitigation strategies
-    6. Success criteria and KPIs
+    2. Key milestones and deliverables
+    3. Resource requirements analysis
+    4. Risk assessment and mitigation strategies
+    5. Success criteria and KPIs
 
     Think through each step and use the available database tools with structured types to create the actual project structure.
     """
