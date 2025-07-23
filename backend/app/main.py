@@ -16,9 +16,9 @@ from .agents.project_management import (
     project_management_agent,
 )
 from .config import agent_config, app_config
+from .events.bus import BusinessEvent, event_bus
 from .models.project import ProjectCreateRequest as PMProjectCreateRequest
 from .models.project import ProjectManagementRequest
-from .events.bus import event_bus, BusinessEvent
 
 app = FastAPI()
 
@@ -146,7 +146,7 @@ async def project_management_query(request: ProjectManagementRequest):
         return {
             "response": result,
             "agent": "project_management",
-            "timestamp": datetime.utcnow().isoformat() + "Z"  # Explicitly mark as UTC
+            "timestamp": datetime.utcnow().isoformat() + "Z",  # Explicitly mark as UTC
         }
     except Exception as e:
         raise HTTPException(
@@ -238,16 +238,40 @@ async def get_psa_defaults():
 async def subscribe_to_events():
     """
     Server-Sent Events (SSE) endpoint for real-time agent events.
+
+    This endpoint establishes a long-lived connection that streams events from:
+    - AI agent actions (staff reassignments, task updates)
+    - System notifications (PTO conflicts, scheduling issues)
+    - Chat messages
+
+    The frontend maintains a persistent connection to this endpoint to receive
+    real-time updates in the sidebar event stream.
+
+    Returns:
+        EventSourceResponse: SSE stream of agent and system events
     """
+
     async def event_generator():
         queue = asyncio.Queue()
-        
+
         async def handle_event(event: BusinessEvent):
             await queue.put(event)
-        
+
         event_bus.subscribe(handle_event)
         try:
             while True:
+                event = await queue.get()
+                yield {
+                    "event": event.type.value,
+                    "data": json.dumps(
+                        {
+                            "type": event.type.value,
+                            "data": event.data,
+                            "agent_id": event.agent_id,
+                            "timestamp": event.timestamp.isoformat(),
+                        }
+                    ),
+                }
                 try:
                     event = await queue.get()
                     if event:
@@ -261,7 +285,7 @@ async def subscribe_to_events():
                             "event": "message",
                             "id": str(id(event)),
                             "retry": 1000,
-                            "data": json.dumps(data)  # Properly serialize the data
+                            "data": json.dumps(data),  # Properly serialize the data
                         }
                 except Exception as e:
                     print(f"Error in event stream: {e}")
@@ -271,13 +295,15 @@ async def subscribe_to_events():
             pass
         finally:
             event_bus.unsubscribe(handle_event)
-    
+
+    return EventSourceResponse(event_generator())
+
     return EventSourceResponse(
         event_generator(),
-        media_type='text/event-stream',
+        media_type="text/event-stream",
         headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no'
-        }
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

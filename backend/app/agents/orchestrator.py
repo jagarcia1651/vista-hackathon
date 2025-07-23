@@ -12,6 +12,8 @@ You are an assistant that routes queries to specialized agents:
 - For queries related to staffers, assignments, resource allocation → Use the resource_management_agent tool
 
 Always select the most appropriate tool based on the user's query.
+
+The resource_management_agent specializes in staffer reassignment scenarios and returns structured responses.
 """
 
 orchestrator = Agent(
