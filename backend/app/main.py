@@ -253,7 +253,7 @@ async def subscribe_to_events():
                     if event:
                         data = {
                             "type": event.type.value,
-                            "agent_id": event.agent_id,
+                            "agent_id": event.agent_id.value,
                             "timestamp": event.timestamp.isoformat() + "Z",  # Explicitly mark as UTC
                             "message": event.message
                         }
