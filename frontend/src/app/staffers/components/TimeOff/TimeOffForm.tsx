@@ -25,14 +25,54 @@ export function TimeOffForm({
    onCancel,
    onApply,
 }: TimeOffFormProps) {
+   // Function to calculate weekdays between two dates
+   const calculateWeekdays = (startDate: string, endDate: string): number => {
+      if (!startDate || !endDate) return 0;
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+      if (start > end) return 0;
+
+      let weekdays = 0;
+      const current = new Date(start);
+
+      while (current <= end) {
+         const dayOfWeek = current.getDay();
+         // Monday = 1, Tuesday = 2, ..., Friday = 5
+         if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            weekdays++;
+         }
+         current.setDate(current.getDate() + 1);
+      }
+
+      return weekdays;
+   };
+
    const updateFormData = (
       field: keyof TimeOffFormData,
       value: string | number
    ) => {
-      onFormDataChange({
+      const newFormData = {
          ...formData,
          [field]: value,
-      });
+      };
+
+      // Auto-calculate cumulative hours when start or end date changes
+      if (field === "time_off_start_date" || field === "time_off_end_date") {
+         const weekdays = calculateWeekdays(
+            field === "time_off_start_date"
+               ? (value as string)
+               : formData.time_off_start_date,
+            field === "time_off_end_date"
+               ? (value as string)
+               : formData.time_off_end_date
+         );
+         newFormData.time_off_cumulative_hours = weekdays * 8;
+      }
+
+      onFormDataChange(newFormData);
    };
 
    return (
@@ -104,20 +144,12 @@ export function TimeOffForm({
                <Input
                   id="cumulative_hours"
                   type="number"
-                  step="0.5"
-                  min="0"
-                  value={formData.time_off_cumulative_hours}
-                  onChange={(e) =>
-                     updateFormData(
-                        "time_off_cumulative_hours",
-                        parseFloat(e.target.value) || 0
-                     )
-                  }
-                  placeholder="8"
-                  required
+                  value={formData.time_off_cumulative_hours || 0}
+                  readOnly
+                  className="bg-slate-100 text-slate-600"
                />
                <div className="text-xs text-slate-500">
-                  Enter the total number of hours for this time off period
+                  Auto-calculated: Weekdays between start and end date × 8 hours
                </div>
             </div>
 
