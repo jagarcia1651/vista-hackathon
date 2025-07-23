@@ -13,11 +13,4 @@ export type BusinessEvent = {
    timestamp: string;
 };
 
-export type ChatMessage = {
-   type: "chat";
-   role: "user" | "assistant";
-   content: string;
-   timestamp: string;
-};
-
-export type UIEvent = BusinessEvent | ChatMessage;
+export type UIEvent = BusinessEvent;
